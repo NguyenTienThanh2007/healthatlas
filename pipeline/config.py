@@ -6,6 +6,7 @@ from pathlib import Path
 
 from dotenv import dotenv_values
 from sqlalchemy import URL
+from sqlalchemy.engine import make_url
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -40,17 +41,26 @@ class Settings:
     log_level: str
 
 
-def get_settings() -> Settings:
-    sqlite_value = get_value(
-        "SQLITE_PATH",
-        "immunisation-2.db",
-    )
 
-    sqlite_path = (
-        ROOT_DIR / sqlite_value
-    ).resolve()
 
-    postgres_url = URL.create(
+def build_postgres_url() -> URL:
+    # HEALTHATLAS_CLOUD_DATABASE_URL
+    database_url = get_value("DATABASE_URL")
+
+    if database_url:
+        cloud_url = make_url(database_url)
+
+        if cloud_url.drivername in {
+            "postgresql",
+            "postgres",
+        }:
+            cloud_url = cloud_url.set(
+                drivername="postgresql+psycopg",
+            )
+
+        return cloud_url
+
+    return URL.create(
         drivername="postgresql+psycopg",
         username=get_value(
             "DB_USER",
@@ -74,6 +84,18 @@ def get_settings() -> Settings:
             "healthatlas",
         ),
     )
+
+def get_settings() -> Settings:
+    sqlite_value = get_value(
+        "SQLITE_PATH",
+        "immunisation-2.db",
+    )
+
+    sqlite_path = (
+        ROOT_DIR / sqlite_value
+    ).resolve()
+
+    postgres_url = build_postgres_url()
 
     return Settings(
         sqlite_path=sqlite_path,

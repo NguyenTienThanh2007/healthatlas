@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: healthatlas-web
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    initialDeployHook: python run_pipeline.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: healthatlas-db
+          property: connectionString
+      - key: SQLITE_PATH
+        value: immunisation-2.db
+      - key: STAGING_SCHEMA
+        value: staging
+      - key: CURATED_SCHEMA
+        value: curated
+      - key: LOG_LEVEL
+        value: INFO
+
+databases:
+  - name: healthatlas-db
+    plan: free
+    region: singapore
+    databaseName: healthatlas
+    user: healthatlas
+    postgresMajorVersion: "18"
+    ipAllowList: []
