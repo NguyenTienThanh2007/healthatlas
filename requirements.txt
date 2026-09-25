@@ -5,3 +5,4 @@ psycopg[binary]>=3.2,<4
 python-dotenv>=1.0,<2
 pytest>=8,<9
 prefect>=3,<4
+gunicorn>=23,<24

@@ -10,6 +10,16 @@ from pipeline.config import get_settings
 app = Flask(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
+
+@app.get("/health")
+def health_check():
+    return jsonify(
+        {
+            "status": "ok",
+            "service": "healthatlas",
+        }
+    )
+
 DATABASE = BASE_DIR / "immunisation-2.db"
 POSTGRES_ENGINE = create_engine(
     get_settings().postgres_url,

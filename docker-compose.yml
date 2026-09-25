@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: healthatlas
+      POSTGRES_PASSWORD: healthatlas_dev
+      POSTGRES_DB: healthatlas
+    ports:
+      - "5433:5432"
+    volumes:
+      - healthatlas_postgres:/var/lib/postgresql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U healthatlas -d healthatlas"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build: .
+    environment:
+      DB_USER: healthatlas
+      DB_PASSWORD: healthatlas_dev
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: healthatlas
+      STAGING_SCHEMA: staging
+      CURATED_SCHEMA: curated
+      LOG_LEVEL: INFO
+      PORT: "5001"
+    ports:
+      - "5001:5001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./immunisation-2.db:/app/immunisation-2.db:ro
+
+volumes:
+  healthatlas_postgres:
