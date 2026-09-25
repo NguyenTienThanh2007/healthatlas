@@ -1,46 +1,220 @@
 {% extends "base.html" %}
 {% block title %}Data Quality Center{% endblock %}
 {% block crumb %}Data Quality Center{% endblock %}
+
 {% block content %}
 <div class="page quality-page">
   <section class="title-strip reveal">
-    <div><span class="eyebrow">DATA QUALITY CENTER</span><h1>Trust the data you explore</h1><p>Inspect completeness, missingness and suspicious values across vaccination, population and infection datasets.</p></div>
-    <div class="quality-score-hero"><small>OVERALL QUALITY SCORE</small><strong>{{ overall_score }}%</strong><span>Average completeness across core fields</span></div>
+    <div>
+      <span class="eyebrow">PIPELINE HEALTH</span>
+      <h1>Trust the data behind HealthAtlas</h1>
+      <p>Monitor the latest ETL run, PostgreSQL data quality scores, source completeness and table-level health from one place.</p>
+    </div>
+    <div class="quality-score-hero">
+      <small>OVERALL DATA QUALITY</small>
+      <strong>{{ "%.2f"|format(overall_score) }}%</strong>
+      {% if pipeline_latest %}
+        <span>Latest successful pipeline run · {{ pipeline_latest["tables_loaded"] }} tables loaded</span>
+      {% else %}
+        <span>Fallback score from SQLite source checks</span>
+      {% endif %}
+    </div>
   </section>
 
-  <section class="quality-meter-grid reveal">
-    <article class="quality-meter-card"><div class="quality-ring" style="--score:{{ metrics['vaccination_coverage'] }}"><span>{{ metrics['vaccination_coverage'] }}%</span></div><div><small>Vaccination coverage</small><strong>Coverage completeness</strong><span>{{ vaccination['missing_coverage'] }} missing of {{ vaccination['total'] }} rows</span></div></article>
-    <article class="quality-meter-card"><div class="quality-ring" style="--score:{{ metrics['vaccination_doses'] }}"><span>{{ metrics['vaccination_doses'] }}%</span></div><div><small>Vaccination doses</small><strong>Dose completeness</strong><span>{{ vaccination['missing_doses'] }} missing values</span></div></article>
-    <article class="quality-meter-card"><div class="quality-ring" style="--score:{{ metrics['population'] }}"><span>{{ metrics['population'] }}%</span></div><div><small>Population</small><strong>Population validity</strong><span>{{ population['invalid_population'] }} invalid records</span></div></article>
-    <article class="quality-meter-card"><div class="quality-ring" style="--score:{{ metrics['infection_cases'] }}"><span>{{ metrics['infection_cases'] }}%</span></div><div><small>Infection cases</small><strong>Case completeness</strong><span>{{ infection['missing_cases'] }} missing values</span></div></article>
+  {% if pipeline_latest %}
+  <section class="panel reveal">
+    <div class="panel-head">
+      <div>
+        <span class="eyebrow">LATEST PIPELINE RUN</span>
+        <h2>PostgreSQL pipeline is healthy</h2>
+        <p>Run {{ pipeline_latest["run_id"] }} finished {{ pipeline_latest["finished_at"].strftime("%d %b %Y, %H:%M") }}.</p>
+      </div>
+      <div>
+        <strong>{{ pipeline_latest["tables_loaded"] }}/{{ pipeline_latest["source_table_count"] }}</strong>
+        <small> tables loaded</small>
+      </div>
+    </div>
+
+    <div class="quality-run-stats">
+      <div><small>ROW COUNT MISMATCHES</small><strong>{{ pipeline_latest["row_count_mismatches"] }}</strong></div>
+      <div><small>VALIDATION ISSUES</small><strong>{{ pipeline_latest["validation_issue_count"] }}</strong></div>
+      <div><small>STATUS</small><strong>{{ pipeline_latest["status"]|upper }}</strong></div>
+    </div>
   </section>
+  {% endif %}
+
+  <section class="quality-meter-grid reveal">
+    {% set quality_metrics = [
+      ("Completeness", metrics["completeness"], "Required fields populated"),
+      ("Validity", metrics["validity"], "Values pass validation rules"),
+      ("Consistency", metrics["consistency"], "Source and target rows agree"),
+      ("Freshness", metrics["freshness"], "Latest available reporting years"),
+      ("Uniqueness", metrics["uniqueness"], "Duplicate-row protection")
+    ] %}
+    {% for label, score, description in quality_metrics %}
+    <article class="quality-meter-card">
+      <div class="quality-ring" style="--score:{{ score }}"><span>{{ "%.2f"|format(score) }}%</span></div>
+      <div><small>{{ label|upper }}</small><strong>{{ label }}</strong><span>{{ description }}</span></div>
+    </article>
+    {% endfor %}
+  </section>
+
+  {% if pipeline_tables %}
+  <section class="panel reveal">
+    <div class="panel-head">
+      <div>
+        <span class="eyebrow">TABLE HEALTH</span>
+        <h2>Quality by PostgreSQL table</h2>
+        <p>Tables are ordered from lowest to highest overall quality so the weakest data is visible first.</p>
+      </div>
+      <button class="mini-action" data-action="export">Export table</button>
+    </div>
+    <div class="table-wrap">
+      <table id="pipeline-quality-table">
+        <thead>
+          <tr>
+            <th>Table</th><th>Rows</th><th>Overall</th><th>Complete</th>
+            <th>Valid</th><th>Consistent</th><th>Fresh</th><th>Unique</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in pipeline_tables %}
+          <tr>
+            <td><strong>{{ row["table_name"] }}</strong></td>
+            <td>{{ "{:,}".format(row["row_count"]) }}</td>
+            <td><strong>{{ "%.2f"|format(row["overall_score"]) }}%</strong></td>
+            <td>{{ "%.2f"|format(row["completeness"]) }}%</td>
+            <td>{{ "%.2f"|format(row["validity"]) }}%</td>
+            <td>{{ "%.2f"|format(row["consistency"]) }}%</td>
+            <td>{{ "%.2f"|format(row["freshness"]) }}%</td>
+            <td>{{ "%.2f"|format(row["uniqueness"]) }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if pipeline_history %}
+  <section class="panel reveal">
+    <div class="panel-head">
+      <div>
+        <span class="eyebrow">RUN HISTORY</span>
+        <h2>Recent pipeline quality</h2>
+        <p>Each successful refresh is persisted in <code>meta.pipeline_run</code>.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Finished</th><th>Overall</th><th>Completeness</th><th>Validity</th>
+            <th>Consistency</th><th>Freshness</th><th>Uniqueness</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in pipeline_history %}
+          <tr>
+            <td>{{ row["finished_at"].strftime("%d %b %Y, %H:%M") }}</td>
+            <td><strong>{{ "%.2f"|format(row["overall_score"]) }}%</strong></td>
+            <td>{{ "%.2f"|format(row["completeness"]) }}%</td>
+            <td>{{ "%.2f"|format(row["validity"]) }}%</td>
+            <td>{{ "%.2f"|format(row["consistency"]) }}%</td>
+            <td>{{ "%.2f"|format(row["freshness"]) }}%</td>
+            <td>{{ "%.2f"|format(row["uniqueness"]) }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
 
   <section class="overview-grid reveal">
     <article class="panel span-2">
-      <div class="panel-head"><div><span class="eyebrow">COMPLETENESS OVER TIME</span><h2>Vaccination coverage field</h2><p>Share of vaccination rows with a reported coverage value each year.</p></div></div>
+      <div class="panel-head">
+        <div>
+          <span class="eyebrow">SOURCE COMPLETENESS OVER TIME</span>
+          <h2>Vaccination coverage field</h2>
+          <p>Share of SQLite vaccination rows with a reported coverage value each year.</p>
+        </div>
+      </div>
       <div class="chart-shell"><canvas data-line-chart data-source="quality-year-series" data-unit="%"></canvas></div>
       <script type="application/json" id="quality-year-series">{{ year_quality|tojson }}</script>
     </article>
 
     <aside class="panel quality-issues-panel">
-      <div class="panel-head"><div><span class="eyebrow">QUALITY FLAGS</span><h2>Potential issues</h2></div></div>
+      <div class="panel-head"><div><span class="eyebrow">SOURCE QUALITY FLAGS</span><h2>Potential issues</h2></div></div>
       <div class="quality-flag-list">
-        <div class="quality-flag"><span class="flag-icon orange">!</span><div><strong>Coverage above 100%</strong><small>{{ vaccination['coverage_over_100'] }} rows. This can be legitimate in reported administrative data, but deserves interpretation.</small></div></div>
-        <div class="quality-flag"><span class="flag-icon violet">▤</span><div><strong>Missing target population</strong><small>{{ vaccination['missing_target'] }} vaccination rows lack a target value.</small></div></div>
-        <div class="quality-flag"><span class="flag-icon red">✣</span><div><strong>Missing infection cases</strong><small>{{ infection['missing_cases'] }} infection rows have no usable case value.</small></div></div>
-        <div class="quality-flag"><span class="flag-icon blue">◎</span><div><strong>Invalid population</strong><small>{{ population['invalid_population'] }} population rows are missing or non-positive.</small></div></div>
+        <div class="quality-flag"><span class="flag-icon orange">!</span><div><strong>Coverage above 100%</strong><small>{{ vaccination["coverage_over_100"] }} rows. Administrative coverage can exceed 100%, so HealthAtlas flags these records instead of silently deleting them.</small></div></div>
+        <div class="quality-flag"><span class="flag-icon violet">▤</span><div><strong>Missing target population</strong><small>{{ vaccination["missing_target"] }} vaccination rows lack a target value.</small></div></div>
+        <div class="quality-flag"><span class="flag-icon red">✣</span><div><strong>Missing infection cases</strong><small>{{ infection["missing_cases"] }} infection rows have no usable case value.</small></div></div>
+        <div class="quality-flag"><span class="flag-icon blue">◎</span><div><strong>Invalid population</strong><small>{{ population["invalid_population"] }} population rows are missing or non-positive.</small></div></div>
       </div>
     </aside>
   </section>
 
   <section class="panel reveal">
-    <div class="panel-head"><div><span class="eyebrow">ANTIGEN QUALITY</span><h2>Coverage completeness by antigen</h2><p>Quickly see which vaccine series have the most complete coverage reporting.</p></div><button class="mini-action" data-action="export">Export table</button></div>
-    <div class="table-wrap"><table id="quality-table"><thead><tr><th>Antigen</th><th>Name</th><th>Total rows</th><th>Missing coverage</th><th>Completeness</th><th>Visual</th></tr></thead><tbody>{% for row in antigen_quality %}<tr><td><strong>{{ row['antigen'] }}</strong></td><td>{{ row['antigen_name'] }}</td><td>{{ row['total'] }}</td><td>{{ row['missing'] }}</td><td><strong>{{ row['completeness'] }}%</strong></td><td><div class="progress"><i style="width:{{ row['completeness'] }}%"></i></div></td></tr>{% endfor %}</tbody></table></div>
+    <div class="panel-head">
+      <div><span class="eyebrow">ANTIGEN SOURCE QUALITY</span><h2>Coverage completeness by antigen</h2><p>Source-level checks remain visible alongside the PostgreSQL pipeline metrics.</p></div>
+      <button class="mini-action" data-action="export">Export table</button>
+    </div>
+    <div class="table-wrap">
+      <table id="quality-table">
+        <thead><tr><th>Antigen</th><th>Name</th><th>Total rows</th><th>Missing coverage</th><th>Completeness</th><th>Visual</th></tr></thead>
+        <tbody>
+          {% for row in antigen_quality %}
+          <tr>
+            <td><strong>{{ row["antigen"] }}</strong></td>
+            <td>{{ row["antigen_name"] }}</td>
+            <td>{{ row["total"] }}</td>
+            <td>{{ row["missing"] }}</td>
+            <td><strong>{{ row["completeness"] }}%</strong></td>
+            <td><div class="progress"><i style="width:{{ row['completeness'] }}%"></i></div></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <section class="section reveal">
-    <div class="section-head"><div><span class="eyebrow">WHY IT MATTERS</span><h2>Quality-aware analytics</h2><p>Every explorer filters unusable values before calculations. This page makes those exclusions visible instead of hiding them.</p></div></div>
-    <div class="principle-grid"><article><span>01</span><strong>Transparent exclusions</strong><p>Missing or invalid values are surfaced, not silently treated as zero.</p></article><article><span>02</span><strong>Context for outliers</strong><p>Coverage above 100% is flagged for interpretation rather than automatically deleted.</p></article><article><span>03</span><strong>Population validity</strong><p>Population-based rates only use positive, available population records.</p></article></div>
+    <div class="section-head">
+      <div><span class="eyebrow">HOW TO READ THE SCORE</span><h2>Transparent quality, not a black box</h2><p>HealthAtlas separates source-level issues from pipeline-level checks and preserves every successful run for auditability.</p></div>
+    </div>
+    <div class="principle-grid">
+      <article><span>01</span><strong>Completeness</strong><p>Measures how much expected data is actually populated.</p></article>
+      <article><span>02</span><strong>Consistency</strong><p>Confirms source and PostgreSQL row counts remain aligned.</p></article>
+      <article><span>03</span><strong>History</strong><p>Every successful ETL run is stored for later comparison.</p></article>
+    </div>
   </section>
 </div>
+
+<style>
+.quality-run-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+.quality-run-stats > div {
+  border: 1px solid var(--line, rgba(127,127,127,.18));
+  border-radius: 16px;
+  padding: 16px;
+}
+.quality-run-stats small {
+  display: block;
+  margin-bottom: 6px;
+  opacity: .65;
+  font-size: .72rem;
+  letter-spacing: .08em;
+}
+.quality-run-stats strong { font-size: 1.15rem; }
+#pipeline-quality-table td,
+#pipeline-quality-table th { white-space: nowrap; }
+@media (max-width: 760px) {
+  .quality-run-stats { grid-template-columns: 1fr; }
+}
+</style>
 {% endblock %}

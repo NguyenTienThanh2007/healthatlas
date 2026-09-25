@@ -3,10 +3,18 @@ from pathlib import Path
 from collections import defaultdict
 import sqlite3
 
+from sqlalchemy import create_engine, text
+
+from pipeline.config import get_settings
+
 app = Flask(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE = BASE_DIR / "immunisation-2.db"
+POSTGRES_ENGINE = create_engine(
+    get_settings().postgres_url,
+    pool_pre_ping=True,
+)
 
 
 def get_db_connection():
@@ -1165,6 +1173,7 @@ def insights():
 
 @app.route("/data-quality")
 def data_quality():
+    # Legacy/source-level checks still come from the local SQLite source.
     conn = get_db_connection()
 
     vaccination = conn.execute("""
@@ -1212,24 +1221,173 @@ def data_quality():
         SELECT
             year,
             COUNT(*) AS total,
-            ROUND(100.0 * SUM(CASE WHEN coverage IS NOT NULL AND TRIM(CAST(coverage AS TEXT)) != '' THEN 1 ELSE 0 END) / COUNT(*), 1) AS value
+            ROUND(
+                100.0 * SUM(
+                    CASE
+                        WHEN coverage IS NOT NULL
+                         AND TRIM(CAST(coverage AS TEXT)) != ''
+                        THEN 1
+                        ELSE 0
+                    END
+                ) / COUNT(*),
+                1
+            ) AS value
         FROM Vaccination
         GROUP BY year
         ORDER BY year
     """).fetchall()
 
     def completeness(total, missing):
-        return round((total - missing) / total * 100, 1) if total else 0
+        return (
+            round((total - missing) / total * 100, 1)
+            if total
+            else 0
+        )
 
-    metrics = {
-        "vaccination_coverage": completeness(vaccination["total"], vaccination["missing_coverage"] or 0),
-        "vaccination_doses": completeness(vaccination["total"], vaccination["missing_doses"] or 0),
-        "population": completeness(population["total"], population["invalid_population"] or 0),
-        "infection_cases": completeness(infection["total"], infection["missing_cases"] or 0),
+    legacy_metrics = {
+        "vaccination_coverage": completeness(
+            vaccination["total"],
+            vaccination["missing_coverage"] or 0,
+        ),
+        "vaccination_doses": completeness(
+            vaccination["total"],
+            vaccination["missing_doses"] or 0,
+        ),
+        "population": completeness(
+            population["total"],
+            population["invalid_population"] or 0,
+        ),
+        "infection_cases": completeness(
+            infection["total"],
+            infection["missing_cases"] or 0,
+        ),
     }
-    overall_score = round(sum(metrics.values()) / len(metrics), 1)
+
+    legacy_overall_score = round(
+        sum(legacy_metrics.values()) / len(legacy_metrics),
+        1,
+    )
 
     conn.close()
+
+    # PostgreSQL is the source of truth for pipeline-level quality.
+    pipeline_latest = None
+    pipeline_tables = []
+    pipeline_history = []
+    postgres_quality_available = False
+
+    try:
+        with POSTGRES_ENGINE.connect() as pg_conn:
+            latest_row = pg_conn.execute(
+                text("""
+                    SELECT
+                        run_id,
+                        started_at,
+                        finished_at,
+                        status,
+                        source_table_count,
+                        tables_loaded,
+                        row_count_mismatches,
+                        validation_issue_count,
+                        completeness,
+                        validity,
+                        consistency,
+                        freshness,
+                        uniqueness,
+                        overall_score
+                    FROM meta.pipeline_run
+                    ORDER BY finished_at DESC
+                    LIMIT 1
+                """)
+            ).mappings().first()
+
+            if latest_row:
+                pipeline_latest = dict(latest_row)
+                postgres_quality_available = True
+
+                table_rows = pg_conn.execute(
+                    text("""
+                        SELECT
+                            table_name,
+                            row_count,
+                            completeness,
+                            validity,
+                            consistency,
+                            freshness,
+                            uniqueness,
+                            overall_score
+                        FROM meta.table_quality
+                        WHERE run_id = :run_id
+                        ORDER BY overall_score ASC, table_name ASC
+                    """),
+                    {
+                        "run_id": pipeline_latest["run_id"],
+                    },
+                ).mappings().all()
+
+                pipeline_tables = [
+                    dict(row)
+                    for row in table_rows
+                ]
+
+            history_rows = pg_conn.execute(
+                text("""
+                    SELECT
+                        run_id,
+                        finished_at,
+                        overall_score,
+                        completeness,
+                        validity,
+                        consistency,
+                        freshness,
+                        uniqueness
+                    FROM meta.pipeline_run
+                    ORDER BY finished_at DESC
+                    LIMIT 10
+                """)
+            ).mappings().all()
+
+            pipeline_history = [
+                dict(row)
+                for row in history_rows
+            ]
+
+    except Exception as exc:
+        app.logger.warning(
+            "Could not load PostgreSQL quality metrics: %s",
+            exc,
+        )
+
+    if pipeline_latest:
+        overall_score = float(
+            pipeline_latest["overall_score"]
+        )
+        metrics = {
+            "completeness": float(
+                pipeline_latest["completeness"]
+            ),
+            "validity": float(
+                pipeline_latest["validity"]
+            ),
+            "consistency": float(
+                pipeline_latest["consistency"]
+            ),
+            "freshness": float(
+                pipeline_latest["freshness"]
+            ),
+            "uniqueness": float(
+                pipeline_latest["uniqueness"]
+            ),
+        }
+    else:
+        overall_score = legacy_overall_score
+        metrics = {
+            "completeness": legacy_overall_score,
+            "validity": legacy_overall_score,
+            "consistency": legacy_overall_score,
+            "freshness": legacy_overall_score,
+            "uniqueness": legacy_overall_score,
+        }
 
     return render_template(
         "data_quality.html",
@@ -1240,6 +1398,12 @@ def data_quality():
         year_quality=rows_to_dicts(year_quality),
         metrics=metrics,
         overall_score=overall_score,
+        legacy_metrics=legacy_metrics,
+        legacy_overall_score=legacy_overall_score,
+        pipeline_latest=pipeline_latest,
+        pipeline_tables=pipeline_tables,
+        pipeline_history=pipeline_history,
+        postgres_quality_available=postgres_quality_available,
     )
 
 
