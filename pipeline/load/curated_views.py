@@ -70,9 +70,11 @@ VIEW_SQL = [
     LEFT JOIN {staging}.region r
         ON c.region = r.region_id
     LEFT JOIN {staging}.economy e
-        ON CAST(c.economy AS TEXT) = CAST(e.economy_id AS TEXT)
+        ON CAST(c.economy AS TEXT)
+         = CAST(e.economy_id AS TEXT)
     LEFT JOIN {staging}.infection_type it
-        ON CAST(i.inf_type AS TEXT) = CAST(it.id AS TEXT)
+        ON CAST(i.inf_type AS TEXT)
+         = CAST(it.id AS TEXT)
     LEFT JOIN {staging}.country_population p
         ON i.country = p.country
        AND i.year = p.year
@@ -80,18 +82,53 @@ VIEW_SQL = [
 ]
 
 
+def _quoted(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+
+def drop_curated_views(
+    engine: Engine,
+    curated_schema: str,
+) -> None:
+    """
+    Drop HealthAtlas curated views before replacing staging tables.
+
+    pandas.to_sql(..., if_exists="replace") drops and recreates staging
+    tables. PostgreSQL will refuse to drop a table while a view depends on
+    it, so a full refresh must remove the dependent views first and rebuild
+    them after the load.
+    """
+    curated = _quoted(curated_schema)
+
+    with engine.begin() as connection:
+        # Drop dependent/derived views first when more are added later.
+        connection.execute(
+            text(
+                f"DROP VIEW IF EXISTS "
+                f"{curated}.infection_enriched"
+            )
+        )
+        connection.execute(
+            text(
+                f"DROP VIEW IF EXISTS "
+                f"{curated}.vaccination_enriched"
+            )
+        )
+
+
 def build_curated_views(
     engine: Engine,
     staging_schema: str,
     curated_schema: str,
 ) -> None:
-    staging = '"' + staging_schema.replace('"', '""') + '"'
-    curated = '"' + curated_schema.replace('"', '""') + '"'
+    staging = _quoted(staging_schema)
+    curated = _quoted(curated_schema)
 
     with engine.begin() as connection:
         connection.execute(
             text(
-                f"CREATE SCHEMA IF NOT EXISTS {curated}"
+                f"CREATE SCHEMA IF NOT EXISTS "
+                f"{curated}"
             )
         )
 
