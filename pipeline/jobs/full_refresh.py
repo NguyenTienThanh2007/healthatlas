@@ -25,6 +25,7 @@ from pipeline.load.postgres_loader import (
     target_row_count,
 )
 from pipeline.load.quality_repository import save_quality_run
+from pipeline.load.warehouse_builder import build_warehouse
 from pipeline.logging_config import configure_logging
 from pipeline.naming import to_snake_case
 from pipeline.quality.scoring import score_run, score_table
@@ -165,6 +166,18 @@ def run_full_refresh(settings: Settings) -> dict:
         settings.curated_schema,
     )
 
+    logger.info("Building dimensional warehouse")
+    warehouse_summary = build_warehouse(
+        engine,
+        settings.staging_schema,
+        "warehouse",
+    )
+
+    logger.info(
+        "Warehouse finished: %s",
+        warehouse_summary,
+    )
+
     audit = pd.DataFrame(audit_rows)
 
     audit_file = (
@@ -245,6 +258,7 @@ def run_full_refresh(settings: Settings) -> dict:
         "row_count_mismatches": row_count_mismatches,
         "validation_issues": len(validation_issues),
         "data_quality": run_score,
+        "warehouse": warehouse_summary,
         "audit_file": str(audit_file),
         "validation_file": str(validation_file),
         "quality_file": str(quality_file),
