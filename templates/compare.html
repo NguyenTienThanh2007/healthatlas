@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Country Compare{% endblock %}
+{% block crumb %}Country Compare{% endblock %}
+{% block content %}
+<div class="page compare-page">
+  <section class="title-strip reveal">
+    <div><span class="eyebrow">MULTI-COUNTRY WORKSPACE</span><h1>Country Compare</h1><p>Put up to four countries on the same vaccination trend, KPI and public-health context view.</p></div>
+    <div class="title-actions"><button class="btn ghost" data-action="save-view">♡ Save comparison</button><button class="btn ghost" data-action="share">↗ Share</button><button class="btn ghost" data-action="export">⇩ Export</button></div>
+  </section>
+
+  <section class="filter-card reveal sticky-filter">
+    <form method="GET" class="compare-filter-grid">
+      <label><span>Country 1</span><select name="countries"><option value="">Choose country</option>{% for c in countries %}<option value="{{ c['CountryID'] }}" {% if selected_ids|length > 0 and c['CountryID'] == selected_ids[0] %}selected{% endif %}>{{ c['name'] }}</option>{% endfor %}</select></label>
+      <label><span>Country 2</span><select name="countries"><option value="">Choose country</option>{% for c in countries %}<option value="{{ c['CountryID'] }}" {% if selected_ids|length > 1 and c['CountryID'] == selected_ids[1] %}selected{% endif %}>{{ c['name'] }}</option>{% endfor %}</select></label>
+      <label><span>Country 3</span><select name="countries"><option value="">Optional</option>{% for c in countries %}<option value="{{ c['CountryID'] }}" {% if selected_ids|length > 2 and c['CountryID'] == selected_ids[2] %}selected{% endif %}>{{ c['name'] }}</option>{% endfor %}</select></label>
+      <label><span>Country 4</span><select name="countries"><option value="">Optional</option>{% for c in countries %}<option value="{{ c['CountryID'] }}" {% if selected_ids|length > 3 and c['CountryID'] == selected_ids[3] %}selected{% endif %}>{{ c['name'] }}</option>{% endfor %}</select></label>
+      <label><span>Antigen</span><select name="antigen">{% for a in antigens %}<option value="{{ a['AntigenID'] }}" {% if a['AntigenID'] == selected_antigen %}selected{% endif %}>{{ a['AntigenID'] }} — {{ a['name'] }}</option>{% endfor %}</select></label>
+      <label><span>Start year</span><input type="number" name="start_year" min="{{ min_year }}" max="{{ max_year }}" value="{{ start_year }}"></label>
+      <label><span>End year</span><input type="number" name="end_year" min="{{ min_year }}" max="{{ max_year }}" value="{{ end_year }}"></label>
+      <div class="filter-buttons"><button class="btn primary" type="submit">Compare countries →</button><a class="btn ghost" href="{{ url_for('compare_countries') }}">Clear</a></div>
+    </form>
+  </section>
+
+  {% if selected_ids %}
+  <section class="compare-summary-grid reveal">
+    {% for row in summaries %}
+    <article class="country-summary-card tilt">
+      <div class="country-card-top"><span class="country-monogram">{{ row['country_id'] }}</span><div><small>{{ row['region_name'] or 'Region unavailable' }}</small><h3>{{ row['country_name'] }}</h3><span>{{ row['economy_phase'] or 'Economy unavailable' }}</span></div><a class="row-icon" href="{{ url_for('country_profile', country_id=row['country_id']) }}">↗</a></div>
+      <div class="country-card-metrics">
+        <div><small>Start coverage</small><strong>{{ row['start_coverage'] if row['start_coverage'] is not none else '—' }}{% if row['start_coverage'] is not none %}%{% endif %}</strong></div>
+        <div><small>End coverage</small><strong>{{ row['end_coverage'] if row['end_coverage'] is not none else '—' }}{% if row['end_coverage'] is not none %}%{% endif %}</strong></div>
+        <div><small>Change</small><strong class="{% if row['change'] is not none and row['change'] >= 0 %}text-mint{% else %}text-red{% endif %}">{% if row['change'] is not none and row['change'] > 0 %}+{% endif %}{{ row['change'] if row['change'] is not none else '—' }}{% if row['change'] is not none %} pts{% endif %}</strong></div>
+        <div><small>Infection snapshot</small><strong>{{ row['infection_rate'] if row['infection_rate'] is not none else '—' }}</strong><span>per 100k · {{ end_year }}</span></div>
+      </div>
+      <div class="country-card-footer"><span>Population{% if row['population_year'] %} · {{ row['population_year'] }}{% endif %}</span><strong>{% if row['population'] %}{{ "{:,.0f}".format(row['population']|float) }}{% else %}—{% endif %}</strong></div>
+    </article>
+    {% endfor %}
+  </section>
+
+  <section class="panel reveal">
+    <div class="panel-head"><div><span class="eyebrow">TREND COMPARISON</span><h2>{{ selected_antigen }} vaccination coverage</h2><p>{{ start_year }}–{{ end_year }} · one shared scale for every selected country.</p></div><div class="chart-legend" data-chart-legend="compare-series-data"></div></div>
+    <div class="chart-shell xl-chart"><canvas data-multi-line-chart data-source="compare-series-data" data-unit="%"></canvas></div>
+    <script type="application/json" id="compare-series-data">{{ chart_series|tojson }}</script>
+  </section>
+
+  <section class="panel reveal">
+    <div class="panel-head"><div><span class="eyebrow">COMPARISON MATRIX</span><h2>Latest available context</h2><p>Coverage, population and infection context in one table.</p></div><button class="mini-action" data-action="copy-table">Copy table</button></div>
+    <div class="table-wrap"><table id="compare-table"><thead><tr><th>Country</th><th>Region</th><th>Economy</th><th>Start</th><th>End</th><th>Change</th><th>Population</th><th>Infection rate</th><th>Profile</th></tr></thead><tbody>{% for row in summaries %}<tr><td><strong>{{ row['country_name'] }}</strong></td><td>{{ row['region_name'] or '—' }}</td><td>{{ row['economy_phase'] or '—' }}</td><td>{{ row['start_coverage'] if row['start_coverage'] is not none else '—' }}{% if row['start_coverage'] is not none %}%{% endif %}</td><td>{{ row['end_coverage'] if row['end_coverage'] is not none else '—' }}{% if row['end_coverage'] is not none %}%{% endif %}</td><td>{% if row['change'] is not none and row['change'] > 0 %}+{% endif %}{{ row['change'] if row['change'] is not none else '—' }}{% if row['change'] is not none %} pts{% endif %}</td><td>{% if row['population'] %}{{ "{:,.0f}".format(row['population']|float) }}{% else %}—{% endif %}</td><td>{{ row['infection_rate'] if row['infection_rate'] is not none else '—' }}</td><td><a class="mini-link" href="{{ url_for('country_profile', country_id=row['country_id']) }}">Open →</a></td></tr>{% endfor %}</tbody></table></div>
+  </section>
+  {% else %}
+  <section class="empty hero-empty reveal"><span>⇄</span><h2>Build a country comparison</h2><p>Select two to four countries, an antigen and a year range. You’ll get a shared trend chart, KPI cards and detailed comparison matrix.</p><div class="empty-actions"><a class="btn secondary" href="{{ url_for('compare_countries', countries='AUS', antigen=selected_antigen) }}">Try Australia</a><a class="btn ghost" href="{{ url_for('vaccination') }}">Browse vaccination data</a></div></section>
+  {% endif %}
+</div>
+{% endblock %}

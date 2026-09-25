@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ country['country_name'] }} · Country Profile{% endblock %}
+{% block crumb %}Country Profile{% endblock %}
+{% block content %}
+<div class="page country-profile-page">
+  <section class="country-hero reveal">
+    <div class="country-hero-overlay"></div>
+    <div class="country-hero-content">
+      <div class="country-id-badge">{{ country['country_id'] }}</div>
+      <div><span class="eyebrow">COUNTRY INTELLIGENCE PROFILE</span><h1>{{ country['country_name'] }}</h1><p>{{ country['region_name'] or 'Region unavailable' }} · {{ country['economy_phase'] or 'Economy unavailable' }}</p></div>
+    </div>
+    <div class="country-hero-actions"><button class="btn glass-btn" data-action="toggle-watch" data-country="{{ country['country_name'] }}" data-country-id="{{ country['country_id'] }}">♡ Watchlist</button><a class="btn glass-btn" href="{{ url_for('compare_countries', countries=country['country_id']) }}">⇄ Compare</a><button class="btn glass-btn" data-action="share">↗ Share</button></div>
+  </section>
+
+  <section class="metric-ribbon reveal country-ribbon">
+    <article><span class="ribbon-icon blue">◎</span><div><small>Latest population</small><strong>{% if latest_population %}{{ "{:,.0f}".format(latest_population['population']|float) }}{% else %}—{% endif %}</strong><span>{% if latest_population %}{{ latest_population['year'] }}{% else %}No data{% endif %}</span></div></article>
+    <article><span class="ribbon-icon mint">⌁</span><div><small>Vaccination indicators</small><strong>{{ latest_vaccination|length }}</strong><span>Latest antigen records</span></div></article>
+    <article><span class="ribbon-icon rose">✣</span><div><small>Infection indicators</small><strong>{{ latest_infection|length }}</strong><span>Tracked diseases</span></div></article>
+    <article><span class="ribbon-icon violet">✓</span><div><small>Profile data quality</small><strong>{{ profile_quality }}%</strong><span>Vaccination completeness</span></div></article>
+  </section>
+
+  <section class="profile-grid reveal">
+    <article class="panel span-2">
+      <div class="panel-head"><div><span class="eyebrow">VACCINATION HISTORY</span><h2>Coverage trends by antigen</h2><p>Every reported vaccination coverage series available for {{ country['country_name'] }}.</p></div><div class="chart-legend" data-chart-legend="country-vaccination-series"></div></div>
+      <div class="chart-shell xl-chart"><canvas data-multi-line-chart data-source="country-vaccination-series" data-unit="%"></canvas></div>
+      <script type="application/json" id="country-vaccination-series">{{ vaccination_series|tojson }}</script>
+    </article>
+
+    <aside class="panel snapshot-panel">
+      <div class="panel-head"><div><span class="eyebrow">LATEST VACCINATION</span><h2>Coverage snapshot</h2></div></div>
+      <div class="snapshot-list">
+        {% for row in latest_vaccination %}
+        <div class="snapshot-row"><div><strong>{{ row['antigen'] }}</strong><span>{{ row['antigen_name'] }} · {{ row['year'] }}</span></div><div class="snapshot-meter"><i style="width:{{ row['coverage'] if row['coverage'] <= 100 else 100 }}%"></i></div><b>{{ row['coverage'] }}%</b></div>
+        {% else %}<div class="empty compact"><p>No vaccination history available.</p></div>{% endfor %}
+      </div>
+    </aside>
+  </section>
+
+  <section class="profile-grid reveal">
+    <article class="panel span-2">
+      <div class="panel-head"><div><span class="eyebrow">INFECTION HISTORY</span><h2>Reported infection rates</h2><p>Cases per 100,000 population across tracked infection types.</p></div><div class="chart-legend" data-chart-legend="country-infection-series"></div></div>
+      <div class="chart-shell"><canvas data-multi-line-chart data-source="country-infection-series" data-unit=" /100k"></canvas></div>
+      <script type="application/json" id="country-infection-series">{{ infection_series|tojson }}</script>
+    </article>
+
+    <aside class="panel snapshot-panel">
+      <div class="panel-head"><div><span class="eyebrow">LATEST INFECTION</span><h2>Burden snapshot</h2></div></div>
+      <div class="snapshot-list infection-snapshot-list">
+        {% for row in latest_infection %}
+        <div class="snapshot-row"><div><strong>{{ row['infection_name'] }}</strong><span>{{ row['year'] }} · {{ "{:,.0f}".format(row['cases']|float) }} cases</span></div><div class="snapshot-meter danger-meter"><i style="width:{{ row['rate_per_100k'] if row['rate_per_100k'] <= 100 else 100 }}%"></i></div><b>{{ row['rate_per_100k'] }}</b></div>
+        {% else %}<div class="empty compact"><p>No infection history available.</p></div>{% endfor %}
+      </div>
+    </aside>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head"><div><span class="eyebrow">NEXT ANALYSIS</span><h2>Continue exploring {{ country['country_name'] }}</h2></div></div>
+    <div class="module-grid module-grid-v4">
+      <a class="module-card blue-card" href="{{ url_for('vaccination', country=country['country_id']) }}"><span class="module-icon">⌁</span><div><small>VACCINATION</small><h3>Filter vaccination records</h3><p>Open the Vaccination Explorer with this country selected.</p></div><b>→</b></a>
+      <a class="module-card violet-card" href="{{ url_for('compare_countries', countries=country['country_id']) }}"><span class="module-icon">⇄</span><div><small>COMPARE</small><h3>Add another country</h3><p>Build a multi-country comparison around this profile.</p></div><b>→</b></a>
+      <a class="module-card orange-card" href="{{ url_for('insights') }}"><span class="module-icon">✦</span><div><small>INSIGHTS</small><h3>Global context</h3><p>See leaders, regions and improvement patterns.</p></div><b>→</b></a>
+      <a class="module-card cyan-card" href="{{ url_for('data_quality') }}"><span class="module-icon">✓</span><div><small>QUALITY</small><h3>Inspect data quality</h3><p>Review completeness across the source dataset.</p></div><b>→</b></a>
+    </div>
+  </section>
+</div>
+{% endblock %}

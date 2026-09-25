@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Vaccination Explorer{% endblock %}
+{% block crumb %}Vaccination Explorer{% endblock %}
+{% block content %}
+<div class="page data-workspace">
+  <section class="title-strip reveal sticky-title">
+    <div><span class="eyebrow">VACCINATION INTELLIGENCE</span><h1>Vaccination Explorer</h1><p>Filter, compare and interpret vaccination performance with live trend context, adjustable thresholds and country-level actions.</p></div>
+    <div class="title-actions"><button class="btn ghost" data-action="save-view">♡ Save view</button><button class="btn ghost" data-action="insights">✦ Insights</button><a class="btn ghost" href="{{ url_for('data_quality') }}">✓ Quality</a><button class="btn ghost" data-action="export">⇩ Export</button></div>
+  </section>
+
+  <section class="filter-card reveal sticky-filter">
+    <form method="GET" class="filter-grid filter-grid-v4">
+      <label><span>Antigen</span><select name="antigen" required><option value="">Select antigen</option>{% for antigen in antigens %}<option value="{{ antigen['AntigenID'] }}" {% if antigen['AntigenID'] == selected_antigen %}selected{% endif %}>{{ antigen['AntigenID'] }} — {{ antigen['name'] }}</option>{% endfor %}</select></label>
+      <label><span>Year</span><select name="year" required><option value="">Select year</option>{% for year in years %}<option value="{{ year['year'] }}" {% if year['year']|string == selected_year %}selected{% endif %}>{{ year['year'] }}</option>{% endfor %}</select></label>
+      <label><span>Region</span><select name="region"><option value="">All regions</option>{% for region in regions %}<option value="{{ region['RegionID'] }}" {% if region['RegionID'] == selected_region %}selected{% endif %}>{{ region['region'] }}</option>{% endfor %}</select></label>
+      <label><span>Country</span><select name="country"><option value="">All countries</option>{% for country in countries %}<option value="{{ country['CountryID'] }}" {% if country['CountryID'] == selected_country %}selected{% endif %}>{{ country['name'] }}</option>{% endfor %}</select></label>
+      <label><span>Minimum coverage</span><div class="range-field"><input type="range" name="minimum_coverage" min="0" max="120" step="5" value="{{ minimum_coverage }}" data-range-input><output data-range-output>{{ minimum_coverage|int }}%</output></div></label>
+      <label><span>Sort results</span><select name="sort"><option value="coverage_desc" {% if sort_option == 'coverage_desc' %}selected{% endif %}>Coverage · high to low</option><option value="coverage_asc" {% if sort_option == 'coverage_asc' %}selected{% endif %}>Coverage · low to high</option><option value="country" {% if sort_option == 'country' %}selected{% endif %}>Country name</option><option value="region" {% if sort_option == 'region' %}selected{% endif %}>Region</option></select></label>
+      <div class="filter-buttons"><button class="btn primary" type="submit">Apply filters →</button><a class="btn ghost" href="{{ url_for('vaccination') }}">Reset</a></div>
+    </form>
+  </section>
+
+  {% if selected_antigen and selected_year %}
+  <section class="kpi-grid reveal">
+    <article class="kpi-card"><div class="kpi-icon mint">✓</div><div><small>Countries meeting threshold</small><strong>{{ results|length }}</strong><span>≥ {{ minimum_coverage|int }}% coverage</span></div><div class="spark blue-spark"></div></article>
+    <article class="kpi-card"><div class="kpi-icon blue">◎</div><div><small>Average matching coverage</small><strong>{% if average_result_coverage is not none %}{{ average_result_coverage }}%{% else %}—{% endif %}</strong><span>Visible result set</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon violet">▤</div><div><small>Missing coverage</small><strong>{{ missing_coverage_count }}</strong><span>Excluded rows</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon orange">⌁</div><div><small>Selected view</small><strong class="small-strong">{{ selected_antigen }}</strong><span>{{ selected_year }} · {{ regional_summary|length }} regions</span></div></article>
+  </section>
+
+  {% if missing_coverage_count > 0 %}<div class="notice warning reveal"><b>Data quality notice</b><span>{{ missing_coverage_count }} matching record(s) have missing coverage and were excluded.</span><a class="mini-action" href="{{ url_for('data_quality') }}">Inspect quality →</a></div>{% endif %}
+
+  <section class="overview-grid reveal">
+    <article class="panel span-2">
+      <div class="panel-head"><div><span class="eyebrow">TREND</span><h2>{{ selected_antigen }} coverage over time</h2><p>{% if selected_country %}Selected country{% elif selected_region %}Selected region{% else %}Global average{% endif %} across available records.</p></div><button class="mini-action" data-action="insights">Explain trend</button></div>
+      <div class="chart-shell"><canvas data-line-chart data-source="vaccination-trend-data" data-unit="%"></canvas></div>
+      <script type="application/json" id="vaccination-trend-data">{{ coverage_trend|tojson }}</script>
+    </article>
+
+    <aside class="panel intelligence-card">
+      <div class="panel-head"><div><span class="eyebrow">QUICK ACTIONS</span><h2>Explore further</h2></div></div>
+      <div class="action-stack">
+        <a href="{{ url_for('compare_countries', antigen=selected_antigen) }}"><span>⇄</span><div><strong>Compare countries</strong><small>Place up to four countries side-by-side.</small></div><b>→</b></a>
+        <a href="{{ url_for('insights', antigen=selected_antigen) }}"><span>✦</span><div><strong>Global insights</strong><small>See leaders and regional patterns.</small></div><b>→</b></a>
+        <button data-action="saved-views"><span>▱</span><div><strong>Save this analysis</strong><small>Return to these exact filters later.</small></div><b>→</b></button>
+      </div>
+    </aside>
+  </section>
+
+  <section class="analytics-grid reveal">
+    <article class="panel wide">
+      <div class="panel-head"><div><h2>Country results</h2><p>Countries meeting at least {{ minimum_coverage|int }}% coverage.</p></div><div class="panel-tools"><input class="table-search" placeholder="Search countries..." data-table-search="#vaccination-table"><button class="mini-action" data-action="copy-table">Copy</button><button class="mini-action" data-action="print">Print</button></div></div>
+      {% if results %}
+      <div class="table-wrap">
+        <table id="vaccination-table" data-smart-table>
+          <thead><tr><th>#</th><th>Country</th><th>Region</th><th>Coverage</th><th>Doses</th><th>Target</th><th>Visual</th><th>Actions</th></tr></thead>
+          <tbody>
+          {% for row in results %}
+            <tr data-country-row data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}" data-region="{{ row['region_name'] }}" data-antigen="{{ row['antigen'] }}" data-year="{{ row['year'] }}" data-value="{{ row['coverage'] }}">
+              <td><span class="rank">{{ loop.index }}</span></td>
+              <td><a class="country-link" href="{{ url_for('country_profile', country_id=row['country_id']) }}">{{ row['country_name'] }}</a></td>
+              <td>{{ row['region_name'] }}</td>
+              <td><strong>{{ row['coverage'] }}%</strong></td>
+              <td>{{ "{:,.0f}".format(row['doses']|float) if row['doses'] is not none else '—' }}</td>
+              <td>{{ "{:,.0f}".format(row['target_num']|float) if row['target_num'] is not none else '—' }}</td>
+              <td><div class="progress"><i style="width:{{ row['coverage'] if row['coverage'] <= 100 else 100 }}%"></i></div></td>
+              <td><div class="row-actions"><button class="row-icon" title="Watchlist" data-action="toggle-watch" data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}">♡</button><button class="row-icon" title="Compare" data-action="add-compare" data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}" data-region="{{ row['region_name'] }}" data-metric="Coverage" data-value="{{ row['coverage'] }}" data-suffix="%">＋</button><a class="row-icon" title="Open profile" href="{{ url_for('country_profile', country_id=row['country_id']) }}">↗</a></div></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<div class="empty"><span>◎</span><h3>No countries meet this threshold</h3><p>Lower the coverage threshold or change filters.</p></div>{% endif %}
+    </article>
+
+    <aside class="panel">
+      <div class="panel-head"><div><h2>Regional summary</h2><p>Average reported coverage.</p></div><button class="mini-action" data-action="insights">Explain</button></div>
+      {% if regional_summary %}
+      <div class="region-bars premium-bars">{% for row in regional_summary %}<div class="region-row" data-region-summary data-name="{{ row['region_name'] }}" data-value="{{ row['average_coverage'] }}"><div><strong>{{ row['region_name'] }}</strong><span>{{ row['countries_above_threshold'] }} countries ≥{{ minimum_coverage|int }}%</span></div><div class="barline"><i style="width:{{ row['average_coverage'] if row['average_coverage'] <= 100 else 100 }}%"></i></div><b>{{ row['average_coverage'] }}%</b></div>{% endfor %}</div>
+      {% else %}<div class="empty compact"><p>No regional summary available.</p></div>{% endif %}
+    </aside>
+  </section>
+  {% else %}
+  <section class="empty hero-empty reveal"><span>⌁</span><h2>Build your vaccination view</h2><p>Choose an antigen and year to unlock real trend charts, country profiles, comparison tools and regional analytics.</p></section>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f8ff">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}HealthAtlas{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body data-endpoint="{{ request.endpoint or '' }}">
+  <div class="page-wipe" aria-hidden="true"></div>
+  <div class="pointer-glow" aria-hidden="true"></div>
+  <div class="ambient-blob ambient-one" aria-hidden="true"></div>
+  <div class="ambient-blob ambient-two" aria-hidden="true"></div>
+  <div class="ambient-blob ambient-three" aria-hidden="true"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="{{ url_for('landing') }}">
+      <span class="brand-logo"><span>H</span><span>A</span></span>
+      <span><strong>HealthAtlas</strong><small>Travel · Global health intelligence</small></span>
+    </a>
+
+    <span class="nav-label">Workspace</span>
+    <nav class="side-nav">
+      <a class="nav-item {% if request.endpoint == 'landing' %}active{% endif %}" href="{{ url_for('landing') }}"><span>⌂</span>Overview</a>
+      <a class="nav-item travel-nav {% if request.endpoint == 'travel' %}active{% endif %}" href="{{ url_for('travel') }}"><span>✈</span>Travel Planner <em>NEW</em></a>
+      <a class="nav-item {% if request.endpoint == 'vaccination' %}active{% endif %}" href="{{ url_for('vaccination') }}"><span>⌁</span>Vaccinations</a>
+      <a class="nav-item {% if request.endpoint == 'improvement' %}active{% endif %}" href="{{ url_for('improvement') }}"><span>↗</span>Improvement</a>
+      <a class="nav-item {% if request.endpoint == 'infections' %}active{% endif %}" href="{{ url_for('infections') }}"><span>✣</span>Infections</a>
+      <a class="nav-item {% if request.endpoint == 'infection_rate' %}active{% endif %}" href="{{ url_for('infection_rate') }}"><span>◉</span>Infection Rate</a>
+    </nav>
+
+    <span class="nav-label tools-label">Intelligence</span>
+    <nav class="side-nav">
+      <a class="nav-item {% if request.endpoint == 'compare_countries' %}active{% endif %}" href="{{ url_for('compare_countries') }}"><span>⇄</span>Compare</a>
+      <a class="nav-item {% if request.endpoint == 'insights' %}active{% endif %}" href="{{ url_for('insights') }}"><span>✦</span>Insights</a>
+      <a class="nav-item {% if request.endpoint == 'data_quality' %}active{% endif %}" href="{{ url_for('data_quality') }}"><span>✓</span>Data Quality</a>
+      <a class="nav-item {% if request.endpoint == 'mission' %}active{% endif %}" href="{{ url_for('mission') }}"><span>◇</span>Mission</a>
+    </nav>
+
+    <span class="nav-label tools-label">Personal</span>
+    <button class="nav-item nav-button" type="button" data-action="saved-views"><span>▱</span>Saved views</button>
+    <button class="nav-item nav-button" type="button" data-action="watchlist"><span>♡</span>Watchlist</button>
+
+    <div class="dataset-card">
+      <div><i></i><strong>Dataset connected</strong></div>
+      <p>Travel + Health Data</p>
+      <small>Public-health intelligence platform</small>
+    </div>
+  </aside>
+
+  <div class="stage">
+    <header class="topbar">
+      <div class="top-left">
+        <button class="menu-btn" type="button" data-action="menu">☰</button>
+        <div class="crumb"><small>Workspace /</small><strong>{% block crumb %}Overview{% endblock %}</strong></div>
+      </div>
+
+      <button class="live-island" type="button" data-action="insights" title="Open smart insights">
+        <span class="live-pulse"></span><strong>Live analysis</strong><small>SQLite connected</small><span class="island-wave"><i></i><i></i><i></i><i></i></span>
+      </button>
+
+      <div class="top-actions">
+        <button class="top-pill" type="button" data-action="open-command"><span>⌘</span><b>K</b><em>Quick actions</em></button>
+        <div class="command-search">
+          <span>⌕</span>
+          <input type="search" placeholder="Search destinations, countries, health data..." data-command-input autocomplete="off">
+          <kbd>/</kbd>
+          <div class="command-menu" data-command-menu hidden></div>
+        </div>
+        <button class="icon-btn" type="button" data-action="share" title="Share current view">↗</button>
+        <button class="icon-btn" type="button" data-action="theme" title="Toggle theme">◐</button>
+        <button class="icon-btn" type="button" data-action="settings" title="Workspace settings">⚙</button>
+        <button class="avatar" type="button" data-action="profile-menu" title="Workspace profile">T</button>
+      </div>
+    </header>
+
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <div class="compare-tray" data-compare-tray hidden>
+    <div class="compare-tray-copy"><small>COUNTRY COMPARE</small><strong><span data-compare-count>0</span> selected</strong></div>
+    <div class="compare-chips" data-compare-chips></div>
+    <div class="compare-actions"><button class="btn ghost compact-btn" data-action="clear-compare">Clear</button><button class="btn primary compact-btn" data-action="open-compare">Compare now →</button></div>
+  </div>
+
+  <div class="drawer-backdrop" data-drawer-backdrop hidden></div>
+  <aside class="utility-drawer" data-drawer hidden>
+    <div class="drawer-head"><div><small data-drawer-kicker>UTILITY</small><h2 data-drawer-title>Panel</h2></div><button class="icon-btn" data-action="close-drawer">×</button></div>
+    <div class="drawer-body" data-drawer-body></div>
+  </aside>
+
+  <div class="modal-backdrop" data-modal-backdrop hidden></div>
+  <section class="modal" data-modal hidden>
+    <div class="modal-head"><div><small data-modal-kicker>DETAIL</small><h2 data-modal-title>Details</h2></div><button class="icon-btn" data-action="close-modal">×</button></div>
+    <div class="modal-body" data-modal-body></div>
+  </section>
+
+  <div class="command-palette-backdrop" data-command-backdrop hidden></div>
+  <section class="command-palette" data-command-palette hidden>
+    <div class="command-palette-input"><span>⌕</span><input data-palette-input placeholder="Search pages, countries and actions..."><kbd>ESC</kbd></div>
+    <div class="palette-results" data-palette-results></div>
+  </section>
+
+  <div class="shortcut-overlay" data-shortcuts hidden>
+    <div class="shortcut-card">
+      <div class="shortcut-head"><div><small>KEYBOARD</small><h2>Shortcuts</h2></div><button class="icon-btn" data-action="close-shortcuts">×</button></div>
+      <div class="shortcut-grid">
+        <div><kbd>⌘ K</kbd><span>Command palette</span></div>
+        <div><kbd>/</kbd><span>Global search</span></div>
+        <div><kbd>G then O</kbd><span>Overview</span></div>
+        <div><kbd>G then C</kbd><span>Compare countries</span></div>
+        <div><kbd>G then I</kbd><span>Insights</span></div>
+        <div><kbd>?</kbd><span>Show shortcuts</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" aria-live="polite"></div>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

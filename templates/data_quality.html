@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Data Quality Center{% endblock %}
+{% block crumb %}Data Quality Center{% endblock %}
+{% block content %}
+<div class="page quality-page">
+  <section class="title-strip reveal">
+    <div><span class="eyebrow">DATA QUALITY CENTER</span><h1>Trust the data you explore</h1><p>Inspect completeness, missingness and suspicious values across vaccination, population and infection datasets.</p></div>
+    <div class="quality-score-hero"><small>OVERALL QUALITY SCORE</small><strong>{{ overall_score }}%</strong><span>Average completeness across core fields</span></div>
+  </section>
+
+  <section class="quality-meter-grid reveal">
+    <article class="quality-meter-card"><div class="quality-ring" style="--score:{{ metrics['vaccination_coverage'] }}"><span>{{ metrics['vaccination_coverage'] }}%</span></div><div><small>Vaccination coverage</small><strong>Coverage completeness</strong><span>{{ vaccination['missing_coverage'] }} missing of {{ vaccination['total'] }} rows</span></div></article>
+    <article class="quality-meter-card"><div class="quality-ring" style="--score:{{ metrics['vaccination_doses'] }}"><span>{{ metrics['vaccination_doses'] }}%</span></div><div><small>Vaccination doses</small><strong>Dose completeness</strong><span>{{ vaccination['missing_doses'] }} missing values</span></div></article>
+    <article class="quality-meter-card"><div class="quality-ring" style="--score:{{ metrics['population'] }}"><span>{{ metrics['population'] }}%</span></div><div><small>Population</small><strong>Population validity</strong><span>{{ population['invalid_population'] }} invalid records</span></div></article>
+    <article class="quality-meter-card"><div class="quality-ring" style="--score:{{ metrics['infection_cases'] }}"><span>{{ metrics['infection_cases'] }}%</span></div><div><small>Infection cases</small><strong>Case completeness</strong><span>{{ infection['missing_cases'] }} missing values</span></div></article>
+  </section>
+
+  <section class="overview-grid reveal">
+    <article class="panel span-2">
+      <div class="panel-head"><div><span class="eyebrow">COMPLETENESS OVER TIME</span><h2>Vaccination coverage field</h2><p>Share of vaccination rows with a reported coverage value each year.</p></div></div>
+      <div class="chart-shell"><canvas data-line-chart data-source="quality-year-series" data-unit="%"></canvas></div>
+      <script type="application/json" id="quality-year-series">{{ year_quality|tojson }}</script>
+    </article>
+
+    <aside class="panel quality-issues-panel">
+      <div class="panel-head"><div><span class="eyebrow">QUALITY FLAGS</span><h2>Potential issues</h2></div></div>
+      <div class="quality-flag-list">
+        <div class="quality-flag"><span class="flag-icon orange">!</span><div><strong>Coverage above 100%</strong><small>{{ vaccination['coverage_over_100'] }} rows. This can be legitimate in reported administrative data, but deserves interpretation.</small></div></div>
+        <div class="quality-flag"><span class="flag-icon violet">▤</span><div><strong>Missing target population</strong><small>{{ vaccination['missing_target'] }} vaccination rows lack a target value.</small></div></div>
+        <div class="quality-flag"><span class="flag-icon red">✣</span><div><strong>Missing infection cases</strong><small>{{ infection['missing_cases'] }} infection rows have no usable case value.</small></div></div>
+        <div class="quality-flag"><span class="flag-icon blue">◎</span><div><strong>Invalid population</strong><small>{{ population['invalid_population'] }} population rows are missing or non-positive.</small></div></div>
+      </div>
+    </aside>
+  </section>
+
+  <section class="panel reveal">
+    <div class="panel-head"><div><span class="eyebrow">ANTIGEN QUALITY</span><h2>Coverage completeness by antigen</h2><p>Quickly see which vaccine series have the most complete coverage reporting.</p></div><button class="mini-action" data-action="export">Export table</button></div>
+    <div class="table-wrap"><table id="quality-table"><thead><tr><th>Antigen</th><th>Name</th><th>Total rows</th><th>Missing coverage</th><th>Completeness</th><th>Visual</th></tr></thead><tbody>{% for row in antigen_quality %}<tr><td><strong>{{ row['antigen'] }}</strong></td><td>{{ row['antigen_name'] }}</td><td>{{ row['total'] }}</td><td>{{ row['missing'] }}</td><td><strong>{{ row['completeness'] }}%</strong></td><td><div class="progress"><i style="width:{{ row['completeness'] }}%"></i></div></td></tr>{% endfor %}</tbody></table></div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head"><div><span class="eyebrow">WHY IT MATTERS</span><h2>Quality-aware analytics</h2><p>Every explorer filters unusable values before calculations. This page makes those exclusions visible instead of hiding them.</p></div></div>
+    <div class="principle-grid"><article><span>01</span><strong>Transparent exclusions</strong><p>Missing or invalid values are surfaced, not silently treated as zero.</p></article><article><span>02</span><strong>Context for outliers</strong><p>Coverage above 100% is flagged for interpretation rather than automatically deleted.</p></article><article><span>03</span><strong>Population validity</strong><p>Population-based rates only use positive, available population records.</p></article></div>
+  </section>
+</div>
+{% endblock %}

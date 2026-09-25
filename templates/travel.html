@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Travel Health Planner · HealthAtlas{% endblock %}
+{% block crumb %}Travel Planner{% endblock %}
+{% block content %}
+<div class="page travel-page">
+  <section class="travel-hero reveal">
+    <div class="travel-hero-copy">
+      <span class="eyebrow">TRIP MODE · BETA</span>
+      <h1>Where are you going?</h1>
+      <p>Start with your destination. HealthAtlas turns country-level public-health data into a clearer trip planning workspace.</p>
+      <div class="trust-strip">
+        <span><i></i> Country-level public data</span>
+        <span>✓ No personal medical record required</span>
+        <span>◎ Official travel-guidance connectors are the next milestone</span>
+      </div>
+    </div>
+
+    <form class="trip-builder panel" method="get" action="{{ url_for('travel') }}">
+      <div class="trip-route">
+        <label>
+          <span>FROM</span>
+          <select name="origin">
+            <option value="">Choose origin</option>
+            {% for row in countries %}
+            <option value="{{ row['CountryID'] }}" {% if origin == row['CountryID'] %}selected{% endif %}>{{ row['name'] }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <div class="route-arrow">→</div>
+
+        <label>
+          <span>TO</span>
+          <select name="destination" required>
+            <option value="">Choose destination</option>
+            {% for row in countries %}
+            <option value="{{ row['CountryID'] }}" {% if destination == row['CountryID'] %}selected{% endif %}>{{ row['name'] }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <div class="trip-meta-grid">
+        <label>
+          <span>DEPARTURE</span>
+          <input type="date" name="departure" value="{{ departure }}">
+        </label>
+        <label>
+          <span>DURATION</span>
+          <select name="duration">
+            <option value="" {% if not duration %}selected{% endif %}>Not sure yet</option>
+            <option value="1-7" {% if duration == '1-7' %}selected{% endif %}>1–7 days</option>
+            <option value="8-14" {% if duration == '8-14' %}selected{% endif %}>8–14 days</option>
+            <option value="15-30" {% if duration == '15-30' %}selected{% endif %}>15–30 days</option>
+            <option value="30+" {% if duration == '30+' %}selected{% endif %}>30+ days</option>
+          </select>
+        </label>
+      </div>
+
+      <button class="btn primary trip-submit" type="submit">Build destination snapshot →</button>
+      <small class="trip-disclaimer">This beta is an analytics/planning interface, not medical advice or a diagnosis tool.</small>
+    </form>
+  </section>
+
+  {% if destination_profile %}
+  <section class="travel-result reveal">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">DESTINATION SNAPSHOT</span>
+        <h2>{{ destination_profile['country_name'] }}</h2>
+        <p>{{ destination_profile['region_name'] or 'Region unavailable' }} · {{ destination_profile['economic_phase'] or 'Economic classification unavailable' }}</p>
+      </div>
+      <div class="head-actions">
+        <a class="btn secondary compact-btn" href="{{ url_for('country_profile', country_id=destination_profile['country_id']) }}">Open full country profile</a>
+        <a class="btn ghost compact-btn" href="{{ url_for('compare_countries', country=destination_profile['country_id']) }}">Compare</a>
+      </div>
+    </div>
+
+    <div class="travel-score-grid">
+      <article class="travel-snapshot-card tilt">
+        <span class="snapshot-icon blue">◉</span>
+        <small>Population</small>
+        <strong>{% if destination_profile['population'] %}{{ "{:,}".format(destination_profile['population']) }}{% else %}—{% endif %}</strong>
+        <p>{% if destination_profile['population_year'] %}Latest available · {{ destination_profile['population_year'] }}{% else %}No population snapshot{% endif %}</p>
+      </article>
+
+      <article class="travel-snapshot-card tilt">
+        <span class="snapshot-icon mint">⌁</span>
+        <small>Vaccination context</small>
+        <strong>{% if destination_profile['average_coverage'] is not none %}{{ destination_profile['average_coverage'] }}%{% else %}—{% endif %}</strong>
+        <p>{% if destination_profile['vaccination_year'] %}Average reported coverage · {{ destination_profile['vaccination_year'] }}{% else %}No current vaccination snapshot{% endif %}</p>
+      </article>
+
+      <article class="travel-snapshot-card tilt">
+        <span class="snapshot-icon violet">✣</span>
+        <small>Infection datasets</small>
+        <strong>{{ destination_profile['infection_types_reported'] or 0 }}</strong>
+        <p>{% if destination_profile['infection_year'] %}Types represented · {{ destination_profile['infection_year'] }}{% else %}No current infection snapshot{% endif %}</p>
+      </article>
+
+      <article class="travel-snapshot-card future-card">
+        <span class="snapshot-icon orange">✦</span>
+        <small>Travel guidance</small>
+        <strong>Next</strong>
+        <p>Official destination guidance, notices and source timestamps will plug into this card.</p>
+      </article>
+    </div>
+
+    <div class="travel-intelligence-grid">
+      <article class="panel travel-next-panel">
+        <div class="panel-head">
+          <div>
+            <span class="eyebrow">TRIP READINESS</span>
+            <h2>What HealthAtlas will check</h2>
+            <p>The product surface is now travel-first. These checks become live as official source connectors are added.</p>
+          </div>
+        </div>
+        <div class="readiness-list">
+          <div><span class="readiness-status current">NOW</span><div><strong>Destination health context</strong><small>Country, population, vaccination and infection analytics from the existing dataset.</small></div></div>
+          <div><span class="readiness-status next">NEXT</span><div><strong>Official destination guidance</strong><small>Travel-health guidance with source, timestamp and destination-specific context.</small></div></div>
+          <div><span class="readiness-status next">NEXT</span><div><strong>Health notices & alerts</strong><small>Freshness-aware alerts connected to authoritative public sources.</small></div></div>
+          <div><span class="readiness-status later">LATER</span><div><strong>Saved trips & reminders</strong><small>Account-based itinerary tracking, watchlists and scheduled reminders.</small></div></div>
+        </div>
+      </article>
+
+      <article class="panel source-principles-panel">
+        <div class="panel-head"><div><span class="eyebrow">PRODUCT PRINCIPLES</span><h2>Built for trust</h2><p>Commercial value comes from trustworthy data infrastructure, not from pretending to be a doctor.</p></div></div>
+        <div class="source-principles">
+          <div><b>01</b><span><strong>Source visible</strong><small>Every future recommendation/notice should expose its originating source.</small></span></div>
+          <div><b>02</b><span><strong>Timestamp visible</strong><small>Users need to know when travel-health information was last refreshed.</small></span></div>
+          <div><b>03</b><span><strong>Analytics ≠ diagnosis</strong><small>The platform supports planning and research, not medical diagnosis.</small></span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+  {% else %}
+  <section class="travel-empty reveal">
+    <div class="travel-empty-orb">✈</div>
+    <span class="eyebrow">START A TRIP</span>
+    <h2>Choose a destination above.</h2>
+    <p>Your first result will use the health data already in the project. The next development step connects authoritative travel-health sources.</p>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

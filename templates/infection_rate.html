@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Infection Rate Benchmark{% endblock %}
+{% block crumb %}Infection Rate{% endblock %}
+{% block content %}
+<div class="page data-workspace">
+  <section class="title-strip reveal">
+    <div><span class="eyebrow">GLOBAL BENCHMARKING</span><h1>Infection Rate</h1><p>Compare country-level infection rates against a worldwide benchmark and surface high-burden outliers.</p></div>
+    <div class="formula-chip"><small>Rate formula</small><strong>cases ÷ population × 100,000</strong></div>
+  </section>
+
+  <section class="filter-card reveal sticky-filter">
+    <form method="GET" class="filter-grid infection-rate-grid-v4">
+      <label><span>Infection</span><select name="infection" required><option value="">Select infection</option>{% for infection in infection_types %}<option value="{{ infection['id'] }}" {% if infection['id'] == selected_infection %}selected{% endif %}>{{ infection['description'] }}</option>{% endfor %}</select></label>
+      <label><span>Year</span><select name="year" required><option value="">Select year</option>{% for year in years %}<option value="{{ year['year'] }}" {% if year['year']|string == selected_year %}selected{% endif %}>{{ year['year'] }}</option>{% endfor %}</select></label>
+      <label><span>Sort</span><select name="sort"><option value="rate_desc" {% if sort_option == 'rate_desc' %}selected{% endif %}>Highest rate first</option><option value="rate_asc" {% if sort_option == 'rate_asc' %}selected{% endif %}>Lowest rate first</option><option value="country" {% if sort_option == 'country' %}selected{% endif %}>Country name</option></select></label>
+      <label><span>Maximum rows</span><select name="top"><option value="10" {% if top_n == 10 %}selected{% endif %}>10</option><option value="25" {% if top_n == 25 %}selected{% endif %}>25</option><option value="50" {% if top_n == 50 %}selected{% endif %}>50</option><option value="100" {% if top_n == 100 %}selected{% endif %}>100</option></select></label>
+      <div class="filter-buttons"><button class="btn primary" type="submit">Update →</button><a class="btn ghost" href="{{ url_for('infection_rate') }}">Reset</a></div>
+    </form>
+  </section>
+
+  {% if selected_infection and selected_year %}
+  <section class="kpi-grid reveal">
+    <article class="kpi-card"><div class="kpi-icon red">◉</div><div><small>Global rate</small><strong>{% if global_rate is not none %}{{ global_rate }}{% else %}—{% endif %}</strong><span>per 100,000</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon orange">!</div><div><small>Above global average</small><strong>{{ above_average_countries|length }}</strong><span>Countries surfaced</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon blue">▣</div><div><small>Selected year</small><strong>{{ selected_year }}</strong><span>Benchmark period</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon violet">✣</div><div><small>Infection</small><strong class="small-strong">{{ infection_name }}</strong><span>Current selection</span></div></article>
+  </section>
+
+  {% if global_rate is not none %}
+  <section class="analytics-grid reveal">
+    <article class="panel wide">
+      <div class="panel-head"><div><h2>Countries above the global rate</h2><p>{{ infection_name }} · {{ selected_year }}</p></div><div class="panel-tools"><input class="table-search" placeholder="Search countries..." data-table-search="#rate-table"><button class="mini-action" data-action="export">Export</button></div></div>
+      {% if above_average_countries %}
+      <div class="table-wrap"><table id="rate-table" data-smart-table><thead><tr><th>#</th><th>Country</th><th>Rate /100k</th><th>Above global</th><th>Burden</th><th>Actions</th></tr></thead><tbody>{% for row in above_average_countries %}<tr data-country-row data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}" data-region="" data-value="{{ row['rate_per_100k'] }}"><td><span class="rank">{{ loop.index }}</span></td><td><a class="country-link" href="{{ url_for('country_profile', country_id=row['country_id']) }}">{{ row['country_name'] }}</a></td><td>{{ row['rate_per_100k'] }}</td><td><span class="danger-text">+{{ row['rate_above_global'] }}</span></td><td><div class="progress danger-progress"><i style="width:{{ row['rate_above_global'] if row['rate_above_global'] <= 100 else 100 }}%"></i></div></td><td><div class="row-actions"><button class="row-icon" data-action="toggle-watch" data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}">♡</button><button class="row-icon" data-action="add-compare" data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}" data-metric="Rate /100k" data-value="{{ row['rate_per_100k'] }}" data-suffix="">＋</button><a class="row-icon" href="{{ url_for('country_profile', country_id=row['country_id']) }}">↗</a></div></td></tr>{% endfor %}</tbody></table></div>
+      {% else %}<div class="empty compact"><p>No country is above the calculated global rate for this selection.</p></div>{% endif %}
+    </article>
+
+    <aside class="panel">
+      <div class="panel-head"><div><h2>Benchmark view</h2><p>Distance above global average.</p></div><button class="mini-action" data-action="insights">Explain</button></div>
+      <div class="benchmark"><div class="benchmark-global"><span>Global benchmark</span><strong>{{ global_rate }}</strong></div>{% for row in above_average_countries[:10] %}<div class="benchmark-row"><span>{{ row['country_name'] }}</span><div><i style="width:{{ row['rate_above_global'] if row['rate_above_global'] <= 100 else 100 }}%"></i></div><b>{{ row['rate_per_100k'] }}</b></div>{% endfor %}</div>
+      <div class="panel-divider"></div>
+      <a class="action-link-card" href="{{ url_for('infections', infection=selected_infection, year=selected_year) }}"><span>✣</span><div><strong>Open Infection Explorer</strong><small>Inspect burden by economic phase.</small></div><b>→</b></a>
+    </aside>
+  </section>
+  {% endif %}
+  {% else %}
+  <section class="empty hero-empty reveal"><span>◉</span><h2>Benchmark infection burden</h2><p>Select an infection and year to calculate the worldwide rate and identify countries above it.</p></section>
+  {% endif %}
+</div>
+{% endblock %}

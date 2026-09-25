@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}HealthAtlas · Travel & Global Health Intelligence{% endblock %}
+{% block crumb %}Overview{% endblock %}
+{% block content %}
+<div class="page dashboard-page">
+  <section class="hero-v4 reveal">
+    <div class="hero-v4-copy">
+      <span class="eyebrow">TRAVEL + GLOBAL HEALTH INTELLIGENCE</span>
+      <h1>Travel smarter.<br><span>Understand global health.</span></h1>
+      <p>Plan trips with a clearer view of destination health context, then go deeper with country, vaccination and infectious-disease analytics.</p>
+      <div class="hero-actions">
+        <a class="btn primary magnetic" href="{{ url_for('travel') }}">✈ Build a trip <b>→</b></a>
+        <a class="btn secondary magnetic" href="{{ url_for('compare_countries') }}">Compare destinations</a>
+        <a class="btn ghost magnetic" href="{{ url_for('insights') }}">✦ Open health intelligence</a>
+      </div>
+      <div class="hero-microstats">
+        <span><i class="green-dot"></i>{{ country_count }} countries</span>
+        <span>{{ antigen_count }} antigens</span>
+        <span>{{ infection_type_count }} infection types</span>
+        <span>{{ first_year }}–{{ last_year }}</span>
+      </div>
+    </div>
+
+    <div class="world-stage" data-parallax>
+      <div class="mesh-ring ring-a"></div><div class="mesh-ring ring-b"></div><div class="mesh-ring ring-c"></div>
+      <div class="globe-v4">
+        <div class="globe-latitudes"></div>
+        <span class="world-dot wd1"></span><span class="world-dot wd2"></span><span class="world-dot wd3"></span><span class="world-dot wd4"></span><span class="world-dot wd5"></span><span class="world-dot wd6"></span>
+      </div>
+      <div class="float-card glass-float fc-a"><small>Latest average coverage</small><strong>{{ average_coverage or '—' }}%</strong><span>{{ latest_year }} global records</span></div>
+      <div class="float-card glass-float fc-b"><small>Countries ≥90%</small><strong>{{ countries_90 }}</strong><span>Latest reporting year</span></div>
+      <div class="float-card glass-float fc-c"><small>Data quality</small><strong>{{ quality_score }}%</strong><span>Coverage completeness</span></div>
+    </div>
+  </section>
+
+  <section class="metric-ribbon reveal">
+    <article><span class="ribbon-icon blue">◎</span><div><small>Countries</small><strong>{{ country_count }}</strong><span>Global dataset</span></div></article>
+    <article><span class="ribbon-icon violet">⌁</span><div><small>Antigen types</small><strong>{{ antigen_count }}</strong><span>Vaccine categories</span></div></article>
+    <article><span class="ribbon-icon mint">▤</span><div><small>Vaccination records</small><strong>{{ "{:,}".format(vaccination_count) }}</strong><span>Queryable observations</span></div></article>
+    <article><span class="ribbon-icon orange">▣</span><div><small>Coverage period</small><strong>{{ first_year }}–{{ last_year }}</strong><span>{{ last_year - first_year + 1 }} years</span></div></article>
+  </section>
+
+  <section class="overview-grid reveal">
+    <article class="panel trend-panel span-2">
+      <div class="panel-head"><div><span class="eyebrow">GLOBAL TREND</span><h2>Vaccination coverage over time</h2><p>Average reported coverage across all available vaccination records.</p></div><a class="mini-link" href="{{ url_for('vaccination') }}">Explore data →</a></div>
+      <div class="chart-shell large-chart"><canvas data-line-chart data-source="overview-coverage-trend" data-unit="%"></canvas></div>
+      <script type="application/json" id="overview-coverage-trend">{{ coverage_trend|tojson }}</script>
+    </article>
+
+    <article class="panel insight-stack-panel">
+      <div class="panel-head"><div><span class="eyebrow">REGIONAL PULSE</span><h2>Latest coverage</h2><p>{{ latest_year }} regional averages.</p></div></div>
+      <div class="region-bars premium-bars">
+        {% for row in regional_snapshot %}
+        <div class="region-row" data-region-summary data-name="{{ row['region_name'] }}" data-value="{{ row['average_coverage'] }}">
+          <div><strong>{{ row['region_name'] }}</strong><span>{{ row['average_coverage'] }}% average</span></div>
+          <div class="barline"><i style="width:{{ row['average_coverage'] if row['average_coverage'] <= 100 else 100 }}%"></i></div>
+          <b>{{ row['average_coverage'] }}%</b>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head">
+      <div><span class="eyebrow">HEALTHATLAS MODULES</span><h2>One platform, two experiences</h2><p>Travellers get a simple destination-first experience while analysts can open the deeper health-data workspace underneath.</p></div>
+      <button class="btn ghost compact-btn" data-action="settings">Customize workspace</button>
+    </div>
+
+    <div class="module-grid module-grid-v4">
+      <a class="module-card travel-card tilt" href="{{ url_for('travel') }}"><span class="module-icon">✈</span><div><small>TRAVEL</small><h3>Travel Health Planner</h3><p>Start with a destination, trip dates and a country health snapshot.</p></div><b>→</b></a>
+      <a class="module-card blue-card tilt" href="{{ url_for('vaccination') }}"><span class="module-icon">⌁</span><div><small>VACCINATION</small><h3>Vaccination Explorer</h3><p>Filter coverage, inspect countries and compare regions.</p></div><b>→</b></a>
+      <a class="module-card mint-card tilt" href="{{ url_for('improvement') }}"><span class="module-icon">↗</span><div><small>IMPROVEMENT</small><h3>Improvement Analysis</h3><p>Compare start and end years using population-based rates.</p></div><b>→</b></a>
+      <a class="module-card violet-card tilt" href="{{ url_for('compare_countries') }}"><span class="module-icon">⇄</span><div><small>COMPARE</small><h3>Country Compare</h3><p>Place up to four countries on the same trend and KPI view.</p></div><b>→</b></a>
+      <a class="module-card orange-card tilt" href="{{ url_for('insights') }}"><span class="module-icon">✦</span><div><small>INSIGHTS</small><h3>Global Insights</h3><p>Surface leaders, regional patterns and long-term change.</p></div><b>→</b></a>
+      <a class="module-card rose-card tilt" href="{{ url_for('infections') }}"><span class="module-icon">✣</span><div><small>INFECTIONS</small><h3>Infection Explorer</h3><p>Explore burden by economic phase, infection and year.</p></div><b>→</b></a>
+      <a class="module-card cyan-card tilt" href="{{ url_for('data_quality') }}"><span class="module-icon">✓</span><div><small>QUALITY</small><h3>Data Quality Center</h3><p>Inspect completeness, missingness and suspicious values.</p></div><b>→</b></a>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Mission & Personas{% endblock %}
+{% block crumb %}Mission{% endblock %}
+{% block content %}
+<div class="page">
+  <section class="title-strip reveal"><div><span class="eyebrow">HUMAN-CENTRED ANALYTICS</span><h1>Mission & Personas</h1><p>Understand who this product serves and the public-health decisions it is designed to support.</p></div><div class="formula-chip"><small>Product principle</small><strong>Data → clarity → action</strong></div></section>
+
+  <section class="section reveal">
+    <div class="section-head"><div><span class="eyebrow">PERSONAS</span><h2>Designed around real user needs</h2><p>The interface turns complex immunisation data into faster, more understandable decisions.</p></div></div>
+    {% if personas %}
+    <div class="persona-grid">
+      {% for persona in personas %}
+      <article class="persona-card tilt">
+        <div class="persona-top"><span class="persona-avatar">{{ persona['persona_name'][:1] }}</span><div><small>{{ persona['role'] }}</small><h3>{{ persona['persona_name'] }}</h3>{% if persona['age_gender'] or persona['location'] %}<p>{% if persona['age_gender'] %}{{ persona['age_gender'] }}{% endif %}{% if persona['age_gender'] and persona['location'] %} · {% endif %}{% if persona['location'] %}{{ persona['location'] }}{% endif %}</p>{% endif %}</div></div>
+        <p class="persona-bg">{{ persona['background'] }}</p>
+        <div class="persona-columns">
+          <div><span class="mini-label">Goals</span>{% if persona['goals'] %}<ul>{% for goal in persona['goals'].split('|') %}<li>{{ goal }}</li>{% endfor %}</ul>{% endif %}</div>
+          <div><span class="mini-label">Needs</span>{% if persona['needs'] %}<ul>{% for need in persona['needs'].split('|') %}<li>{{ need }}</li>{% endfor %}</ul>{% endif %}</div>
+          <div><span class="mini-label">Skills</span>{% if persona['skills'] %}<ul>{% for skill in persona['skills'].split('|') %}<li>{{ skill }}</li>{% endfor %}</ul>{% endif %}</div>
+          <div><span class="mini-label">Pain points</span>{% if persona['pain_points'] %}<ul>{% for pain in persona['pain_points'].split('|') %}<li>{{ pain }}</li>{% endfor %}</ul>{% endif %}</div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty"><p>No persona data is available.</p></div>{% endif %}
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head"><div><span class="eyebrow">TEAM</span><h2>Project contributors</h2></div></div>
+    <div class="team-grid">{% for member in team_members %}<article class="team-card tilt"><span>{{ member['full_name'][:1] }}</span><div><strong>{{ member['full_name'] }}</strong><small>{{ member['student_number'] }}</small></div></article>{% endfor %}</div>
+  </section>
+</div>
+{% endblock %}

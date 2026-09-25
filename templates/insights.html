@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Global Insights{% endblock %}
+{% block crumb %}Global Insights{% endblock %}
+{% block content %}
+<div class="page insights-page">
+  <section class="title-strip reveal">
+    <div><span class="eyebrow">GLOBAL INTELLIGENCE</span><h1>Insights</h1><p>Surface vaccination leaders, regional patterns, long-term improvement and infection context from the connected dataset.</p></div>
+    <div class="title-actions"><button class="btn ghost" data-action="save-view">♡ Save view</button><button class="btn ghost" data-action="share">↗ Share</button><a class="btn ghost" href="{{ url_for('data_quality') }}">✓ Quality</a></div>
+  </section>
+
+  <section class="filter-card reveal">
+    <form method="GET" class="insight-filter">
+      <label><span>Vaccination antigen</span><select name="antigen" onchange="this.form.submit()">{% for antigen in antigens %}<option value="{{ antigen['AntigenID'] }}" {% if antigen['AntigenID'] == selected_antigen %}selected{% endif %}>{{ antigen['AntigenID'] }} — {{ antigen['name'] }}</option>{% endfor %}</select></label>
+      <div class="filter-context"><span>Latest vaccination year</span><strong>{{ latest_year }}</strong></div>
+      <div class="filter-context"><span>Improvement window</span><strong>{{ comparison_start }} → {{ latest_year }}</strong></div>
+      <div class="filter-context"><span>Latest infection year</span><strong>{{ infection_year }}</strong></div>
+    </form>
+  </section>
+
+  <section class="kpi-grid reveal">
+    <article class="kpi-card"><div class="kpi-icon blue">◎</div><div><small>Average coverage</small><strong>{{ headline['average_coverage'] if headline['average_coverage'] is not none else '—' }}%</strong><span>{{ selected_antigen }} · {{ latest_year }}</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon mint">✓</div><div><small>Countries ≥90%</small><strong>{{ headline['countries_90'] }}</strong><span>of {{ headline['countries_reporting'] }} reporting</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon violet">↗</div><div><small>Top improvement</small><strong>{% if improvements %}+{{ improvements[0]['improvement'] }} pts{% else %}—{% endif %}</strong><span>{% if improvements %}{{ improvements[0]['country_name'] }}{% else %}No comparable record{% endif %}</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon orange">✣</div><div><small>Tracked infections</small><strong>{{ infection_summary|length }}</strong><span>{{ infection_year }} global context</span></div></article>
+  </section>
+
+  <section class="overview-grid reveal">
+    <article class="panel span-2">
+      <div class="panel-head"><div><span class="eyebrow">LONG-TERM SIGNAL</span><h2>{{ selected_antigen }} average coverage trend</h2><p>Average reported coverage over time.</p></div><a class="mini-link" href="{{ url_for('vaccination', antigen=selected_antigen, year=latest_year) }}">Open Explorer →</a></div>
+      <div class="chart-shell"><canvas data-line-chart data-source="insight-trend-data" data-unit="%"></canvas></div>
+      <script type="application/json" id="insight-trend-data">{{ trend|tojson }}</script>
+    </article>
+
+    <aside class="panel">
+      <div class="panel-head"><div><span class="eyebrow">REGIONAL PERFORMANCE</span><h2>{{ latest_year }} averages</h2></div></div>
+      <div class="region-bars premium-bars">{% for row in regional %}<div class="region-row"><div><strong>{{ row['region_name'] }}</strong><span>{{ row['countries'] }} countries</span></div><div class="barline"><i style="width:{{ row['average_coverage'] if row['average_coverage'] <= 100 else 100 }}%"></i></div><b>{{ row['average_coverage'] }}%</b></div>{% endfor %}</div>
+    </aside>
+  </section>
+
+  <section class="insight-columns reveal">
+    <article class="panel">
+      <div class="panel-head"><div><span class="eyebrow">LEADERS</span><h2>Highest current coverage</h2><p>{{ selected_antigen }} · {{ latest_year }}</p></div></div>
+      <div class="leader-list">
+        {% for row in leaders %}
+        <a class="leader-row" href="{{ url_for('country_profile', country_id=row['country_id']) }}"><span class="rank">{{ loop.index }}</span><div><strong>{{ row['country_name'] }}</strong><small>{{ row['region_name'] or 'Region unavailable' }}</small></div><div class="leader-progress"><i style="width:{{ row['coverage'] if row['coverage'] <= 100 else 100 }}%"></i></div><b>{{ row['coverage'] }}%</b></a>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><div><span class="eyebrow">IMPROVEMENT</span><h2>Strongest gains</h2><p>{{ comparison_start }} → {{ latest_year }}</p></div></div>
+      <div class="leader-list improvement-leaders">
+        {% for row in improvements %}
+        <a class="leader-row" href="{{ url_for('country_profile', country_id=row['country_id']) }}"><span class="rank">{{ loop.index }}</span><div><strong>{{ row['country_name'] }}</strong><small>{{ row['start_rate'] }}% → {{ row['end_rate'] }}%</small></div><div class="leader-progress mint-progress"><i style="width:{{ row['improvement'] if row['improvement'] <= 100 else 100 }}%"></i></div><b>+{{ row['improvement'] }}</b></a>
+        {% else %}<div class="empty compact"><p>No comparable improvement data for this interval.</p></div>{% endfor %}
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><div><span class="eyebrow">INFECTION CONTEXT</span><h2>Global burden snapshot</h2><p>{{ infection_year }}</p></div></div>
+      <div class="infection-context-list">
+        {% for row in infection_summary %}
+        <div class="infection-context-row"><span class="infection-orb"></span><div><strong>{{ row['infection_name'] }}</strong><small>{{ "{:,.0f}".format(row['total_cases']|float) }} reported cases</small></div><b>{{ row['global_rate'] }} /100k</b></div>
+        {% endfor %}
+      </div>
+      <a class="action-link-card" href="{{ url_for('infection_rate') }}"><span>◉</span><div><strong>Open global benchmark</strong><small>Find countries above the worldwide infection rate.</small></div><b>→</b></a>
+    </article>
+  </section>
+</div>
+{% endblock %}

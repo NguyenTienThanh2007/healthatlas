@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local datasets
+immunisation-2.db
+*.sqlite
+*.sqlite3
+
+# Logs / caches
+logs/
+*.log
+.cache/
+
+# macOS / editors
+.DS_Store
+.vscode/
+.idea/
+
+# Local packaging / backups
+*.zip
+.redesign-backup-*/
+.healthatlas-backup-*/

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Infection Explorer{% endblock %}
+{% block crumb %}Infection Explorer{% endblock %}
+{% block content %}
+<div class="page data-workspace">
+  <section class="title-strip reveal">
+    <div><span class="eyebrow">DISEASE-BURDEN ANALYTICS</span><h1>Infection Explorer</h1><p>Compare infectious-disease burden by economic phase, infection type and year using population-normalised rates.</p></div>
+    <div class="title-actions"><button class="btn ghost" data-action="save-view">♡ Save view</button><button class="btn ghost" data-action="insights">✦ Insights</button><a class="btn ghost" href="{{ url_for('data_quality') }}">✓ Quality</a><button class="btn ghost" data-action="export">⇩ Export</button></div>
+  </section>
+
+  <section class="filter-card reveal sticky-filter">
+    <form method="GET" class="filter-grid infection-grid">
+      <label><span>Economic phase</span><select name="economy" required><option value="">Select economy</option>{% for economy in economies %}<option value="{{ economy['economyID'] }}" {% if economy['economyID']|string == selected_economy %}selected{% endif %}>{{ economy['phase'] }}</option>{% endfor %}</select></label>
+      <label><span>Infection</span><select name="infection" required><option value="">Select infection</option>{% for infection in infection_types %}<option value="{{ infection['id'] }}" {% if infection['id'] == selected_infection %}selected{% endif %}>{{ infection['description'] }}</option>{% endfor %}</select></label>
+      <label><span>Year</span><select name="year" required><option value="">Select year</option>{% for year in years %}<option value="{{ year['year'] }}" {% if year['year']|string == selected_year %}selected{% endif %}>{{ year['year'] }}</option>{% endfor %}</select></label>
+      <div class="filter-buttons"><button class="btn primary" type="submit">Update results →</button><a class="btn ghost" href="{{ url_for('infections') }}">Reset</a></div>
+    </form>
+  </section>
+
+  {% if selected_economy and selected_infection and selected_year %}
+  <section class="kpi-grid reveal">
+    <article class="kpi-card"><div class="kpi-icon red">✣</div><div><small>Countries returned</small><strong>{{ country_results|length }}</strong><span>Matching selection</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon blue">◎</div><div><small>Economic phases</small><strong>{{ phase_summary|length }}</strong><span>Summary categories</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon orange">!</div><div><small>Missing records</small><strong>{{ missing_data_count }}</strong><span>Excluded or unusable</span></div></article>
+    <article class="kpi-card"><div class="kpi-icon violet">▣</div><div><small>Selected year</small><strong>{{ selected_year }}</strong><span>Reporting period</span></div></article>
+  </section>
+
+  {% if missing_data_count > 0 %}<div class="notice warning reveal"><b>Data quality notice</b><span>{{ missing_data_count }} matching record(s) were unusable because cases or population were missing.</span><a class="mini-action" href="{{ url_for('data_quality') }}">Inspect quality →</a></div>{% endif %}
+
+  <section class="overview-grid reveal">
+    <article class="panel span-2">
+      <div class="panel-head"><div><span class="eyebrow">GLOBAL TREND</span><h2>Infection rate over time</h2><p>Worldwide rate per 100,000 for the selected infection type.</p></div><a class="mini-link" href="{{ url_for('infection_rate', infection=selected_infection, year=selected_year) }}">Open benchmark →</a></div>
+      <div class="chart-shell"><canvas data-line-chart data-source="infection-trend-data" data-unit=" /100k"></canvas></div>
+      <script type="application/json" id="infection-trend-data">{{ global_trend|tojson }}</script>
+    </article>
+
+    <aside class="panel intelligence-card">
+      <div class="panel-head"><div><span class="eyebrow">NEXT STEP</span><h2>Benchmark the burden</h2></div></div>
+      <div class="action-stack">
+        <a href="{{ url_for('infection_rate', infection=selected_infection, year=selected_year) }}"><span>◉</span><div><strong>Compare with global rate</strong><small>Surface countries above the worldwide benchmark.</small></div><b>→</b></a>
+        <button data-action="insights"><span>✦</span><div><strong>Explain this view</strong><small>Generate insights from the visible result set.</small></div><b>→</b></button>
+        <button data-action="save-view"><span>▱</span><div><strong>Save these filters</strong><small>Return to this exact analysis later.</small></div><b>→</b></button>
+      </div>
+    </aside>
+  </section>
+
+  <section class="analytics-grid reveal">
+    <article class="panel wide">
+      <div class="panel-head"><div><h2>Country infection rates</h2><p>Cases per 100,000 population.</p></div><div class="panel-tools"><input class="table-search" placeholder="Search countries..." data-table-search="#infection-table"><button class="mini-action" data-action="copy-table">Copy</button></div></div>
+      {% if country_results %}
+      <div class="table-wrap"><table id="infection-table" data-smart-table><thead><tr><th>#</th><th><a href="{{ url_for('infections', economy=selected_economy, infection=selected_infection, year=selected_year, sort_by='country', sort_dir=country_sort_next) }}">Country {% if sort_by == 'country' %}{{ '▲' if sort_dir == 'asc' else '▼' }}{% endif %}</a></th><th>Economy</th><th>Infection</th><th>Year</th><th><a href="{{ url_for('infections', economy=selected_economy, infection=selected_infection, year=selected_year, sort_by='rate', sort_dir=rate_sort_next) }}">Rate {% if sort_by == 'rate' %}{{ '▲' if sort_dir == 'asc' else '▼' }}{% endif %}</a></th><th>Visual</th><th>Actions</th></tr></thead><tbody>{% for row in country_results %}<tr data-country-row data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}" data-region="{{ row['economic_phase'] }}" data-value="{{ row['cases_per_100k'] }}"><td><span class="rank">{{ loop.index }}</span></td><td><a class="country-link" href="{{ url_for('country_profile', country_id=row['country_id']) }}">{{ row['country_name'] }}</a></td><td>{{ row['economic_phase'] }}</td><td>{{ row['infection_name'] }}</td><td>{{ row['year'] }}</td><td><strong>{{ row['cases_per_100k'] }}</strong></td><td><div class="progress danger-progress"><i style="width:{{ row['cases_per_100k'] if row['cases_per_100k'] <= 100 else 100 }}%"></i></div></td><td><div class="row-actions"><button class="row-icon" data-action="toggle-watch" data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}">♡</button><button class="row-icon" data-action="add-compare" data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}" data-region="{{ row['economic_phase'] }}" data-metric="Cases /100k" data-value="{{ row['cases_per_100k'] }}" data-suffix="">＋</button><a class="row-icon" href="{{ url_for('country_profile', country_id=row['country_id']) }}">↗</a></div></td></tr>{% endfor %}</tbody></table></div>
+      {% else %}<div class="empty compact"><p>No usable country results for this selection.</p></div>{% endif %}
+    </article>
+
+    <aside class="panel">
+      <div class="panel-head"><div><h2>Cases by economic phase</h2><p>Total reported cases.</p></div><button class="mini-action" data-action="insights">Explain</button></div>
+      {% if phase_summary %}<div class="region-bars infection-bars">{% for row in phase_summary %}<div class="region-row"><div><strong>{{ row['economic_phase'] }}</strong><span>{{ row['infection_name'] }} · {{ row['year'] }}</span></div><div class="barline"><i style="width:{{ 20 + loop.index*14 }}%"></i></div><b>{{ "{:,.0f}".format(row['total_cases']|float) }}</b></div>{% endfor %}</div>{% else %}<div class="empty compact"><p>No phase summary available.</p></div>{% endif %}
+    </aside>
+  </section>
+  {% else %}<section class="empty hero-empty reveal"><span>✣</span><h2>Explore infectious-disease burden</h2><p>Select an economic phase, infection type and year to begin.</p></section>{% endif %}
+</div>
+{% endblock %}

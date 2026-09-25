@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Improvement Analysis{% endblock %}
+{% block crumb %}Improvement Analysis{% endblock %}
+{% block content %}
+<div class="page data-workspace">
+  <section class="title-strip reveal">
+    <div><span class="eyebrow">YEAR-ON-YEAR ANALYTICS</span><h1>Improvement Analysis</h1><p>Compare vaccination rates between two years, rank gains or declines, and open any country for deeper context.</p></div>
+    <div class="formula-chip"><small>Vaccination rate</small><strong>doses ÷ population × 100</strong></div>
+  </section>
+
+  <section class="filter-card reveal sticky-filter">
+    <form method="GET" class="filter-grid improvement-grid-v4">
+      <label><span>Antigen</span><select name="antigen" required><option value="">Select antigen</option>{% for antigen in antigens %}<option value="{{ antigen['AntigenID'] }}" {% if antigen['AntigenID'] == selected_antigen %}selected{% endif %}>{{ antigen['AntigenID'] }} — {{ antigen['name'] }}</option>{% endfor %}</select></label>
+      <label><span>Start year</span><select name="start_year" required><option value="">Start year</option>{% for year in years %}<option value="{{ year['year'] }}" {% if year['year']|string == start_year %}selected{% endif %}>{{ year['year'] }}</option>{% endfor %}</select></label>
+      <label><span>End year</span><select name="end_year" required><option value="">End year</option>{% for year in years %}<option value="{{ year['year'] }}" {% if year['year']|string == end_year %}selected{% endif %}>{{ year['year'] }}</option>{% endfor %}</select></label>
+      <label><span>View</span><select name="mode"><option value="improvement" {% if mode == 'improvement' %}selected{% endif %}>Biggest improvements</option><option value="decline" {% if mode == 'decline' %}selected{% endif %}>Biggest declines</option><option value="all" {% if mode == 'all' %}selected{% endif %}>Largest changes</option></select></label>
+      <label><span>Results</span><select name="limit"><option value="5" {% if limit == '5' %}selected{% endif %}>Top 5</option><option value="10" {% if limit == '10' %}selected{% endif %}>Top 10</option><option value="20" {% if limit == '20' %}selected{% endif %}>Top 20</option></select></label>
+      <div class="filter-buttons"><button class="btn primary" type="submit">Run analysis →</button><a class="btn ghost" href="{{ url_for('improvement') }}">Reset</a></div>
+    </form>
+  </section>
+
+  {% if error_message %}<div class="notice danger reveal"><b>Unable to run analysis</b><span>{{ error_message }}</span></div>{% endif %}
+
+  {% if selected_antigen and start_year and end_year and not error_message %}
+    {% if improvement_results %}
+    <section class="kpi-grid reveal">
+      <article class="kpi-card"><div class="kpi-icon {% if mode == 'decline' %}red{% else %}mint{% endif %}">{% if mode == 'decline' %}↘{% else %}↗{% endif %}</div><div><small>{% if mode == 'decline' %}Largest decline{% else %}Largest change{% endif %}</small><strong>{% if improvement_results[0]['improvement'] > 0 %}+{% endif %}{{ improvement_results[0]['improvement'] }} pts</strong><span>{{ improvement_results[0]['country_name'] }}</span></div></article>
+      <article class="kpi-card"><div class="kpi-icon blue">◎</div><div><small>Average visible change</small><strong>{% if summary['average'] is not none and summary['average'] > 0 %}+{% endif %}{{ summary['average'] if summary['average'] is not none else '—' }} pts</strong><span>{{ summary['count'] }} countries</span></div></article>
+      <article class="kpi-card"><div class="kpi-icon violet">⌁</div><div><small>Start year</small><strong>{{ start_year }}</strong><span>Baseline</span></div></article>
+      <article class="kpi-card"><div class="kpi-icon orange">▣</div><div><small>End year</small><strong>{{ end_year }}</strong><span>Comparison point</span></div></article>
+    </section>
+
+    <section class="analytics-grid reveal">
+      <article class="panel wide">
+        <div class="panel-head"><div><h2>{% if mode == 'decline' %}Largest vaccination-rate declines{% elif mode == 'all' %}Largest absolute changes{% else %}Countries with greatest improvement{% endif %}</h2><p>{{ selected_antigen }} · {{ start_year }} → {{ end_year }}</p></div><div class="panel-tools"><input class="table-search" placeholder="Search countries..." data-table-search="#improvement-table"><button class="mini-action" data-action="export">Export</button></div></div>
+        <div class="table-wrap">
+          <table id="improvement-table" data-smart-table>
+            <thead><tr><th>#</th><th>Country</th><th>Start rate</th><th>End rate</th><th>Change</th><th>Visual</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for row in improvement_results %}
+              <tr data-country-row data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}" data-region="" data-antigen="{{ selected_antigen }}" data-year="{{ end_year }}" data-value="{{ row['improvement'] }}">
+                <td><span class="rank">{{ row['rank'] }}</span></td>
+                <td><a class="country-link" href="{{ url_for('country_profile', country_id=row['country_id']) }}">{{ row['country_name'] }}</a></td>
+                <td>{{ row['start_rate'] }}%</td><td>{{ row['end_rate'] }}%</td>
+                <td><span class="{% if row['improvement'] >= 0 %}positive{% else %}negative{% endif %}">{% if row['improvement'] > 0 %}+{% endif %}{{ row['improvement'] }} pts</span></td>
+                <td><div class="progress {% if row['improvement'] < 0 %}danger-progress{% else %}mint-progress{% endif %}"><i style="width:{{ row['improvement']|abs if row['improvement']|abs <= 100 else 100 }}%"></i></div></td>
+                <td><div class="row-actions"><button class="row-icon" data-action="toggle-watch" data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}">♡</button><button class="row-icon" data-action="add-compare" data-country="{{ row['country_name'] }}" data-country-id="{{ row['country_id'] }}" data-metric="Change" data-value="{{ row['improvement'] }}" data-suffix=" pts">＋</button><a class="row-icon" href="{{ url_for('country_profile', country_id=row['country_id']) }}">↗</a></div></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <aside class="panel">
+        <div class="panel-head"><div><h2>Change ranking</h2><p>Magnitude of visible change.</p></div><button class="mini-action" data-action="insights">Explain</button></div>
+        <div class="rank-bars">
+        {% for row in improvement_results[:8] %}
+          <div class="rank-bar {% if row['improvement'] < 0 %}decline-bar{% endif %}"><span>{{ loop.index }}</span><strong>{{ row['country_name'] }}</strong><div><i style="width:{{ row['improvement']|abs if row['improvement']|abs <= 100 else 100 }}%"></i></div><b>{% if row['improvement'] > 0 %}+{% endif %}{{ row['improvement'] }}</b></div>
+        {% endfor %}
+        </div>
+        <div class="insight-card"><span>✦</span><div><small>Explore next</small><p>Open a country profile for its vaccination and infection history, or add countries to a comparison workspace.</p></div></div>
+      </aside>
+    </section>
+    {% else %}<section class="empty reveal"><span>↗</span><h2>No matching changes found</h2><p>Try a different antigen, mode or year range.</p></section>{% endif %}
+  {% else %}
+    {% if not error_message %}<section class="empty hero-empty reveal"><span>↗</span><h2>Compare two points in time</h2><p>Select an antigen and year range to analyse improvements, declines or the largest absolute changes.</p></section>{% endif %}
+  {% endif %}
+</div>
+{% endblock %}
