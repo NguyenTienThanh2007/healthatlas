@@ -26,6 +26,7 @@ from pipeline.load.postgres_loader import (
 )
 from pipeline.load.quality_repository import save_quality_run
 from pipeline.load.warehouse_builder import build_warehouse
+from pipeline.load.analytics_marts import build_analytics_marts
 from pipeline.logging_config import configure_logging
 from pipeline.naming import to_snake_case
 from pipeline.quality.scoring import score_run, score_table
@@ -178,6 +179,18 @@ def run_full_refresh(settings: Settings) -> dict:
         warehouse_summary,
     )
 
+    logger.info("Building analytics marts")
+    marts_summary = build_analytics_marts(
+        engine,
+        "analytics",
+        "warehouse",
+    )
+
+    logger.info(
+        "Analytics marts finished: %s",
+        marts_summary,
+    )
+
     audit = pd.DataFrame(audit_rows)
 
     audit_file = (
@@ -259,6 +272,7 @@ def run_full_refresh(settings: Settings) -> dict:
         "validation_issues": len(validation_issues),
         "data_quality": run_score,
         "warehouse": warehouse_summary,
+        "analytics_marts": marts_summary,
         "audit_file": str(audit_file),
         "validation_file": str(validation_file),
         "quality_file": str(quality_file),
