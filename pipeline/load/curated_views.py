@@ -70,9 +70,9 @@ VIEW_SQL = [
     LEFT JOIN {staging}.region r
         ON c.region = r.region_id
     LEFT JOIN {staging}.economy e
-        ON c.economy = e.economy_id
+        ON CAST(c.economy AS TEXT) = CAST(e.economy_id AS TEXT)
     LEFT JOIN {staging}.infection_type it
-        ON i.inf_type = it.id
+        ON CAST(i.inf_type AS TEXT) = CAST(it.id AS TEXT)
     LEFT JOIN {staging}.country_population p
         ON i.country = p.country
        AND i.year = p.year
