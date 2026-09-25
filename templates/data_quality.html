@@ -1,5 +1,137 @@
 {% extends "base.html" %}
-{% block title %}Data Quality Center{% endblock %}
+{% block title %}Data Quality Center<script>
+(() => {
+  const canvas = document.getElementById("pipeline-health-chart");
+  const source = document.getElementById("pipeline-health-data");
+  if (!canvas || !source) return;
+
+  let data = [];
+  try {
+    data = JSON.parse(source.textContent || "[]");
+  } catch (error) {
+    console.warn("Could not parse pipeline chart data", error);
+    return;
+  }
+
+  if (!data.length) return;
+
+  const ctx = canvas.getContext("2d");
+  const ratio = window.devicePixelRatio || 1;
+
+  function draw() {
+    const rect = canvas.getBoundingClientRect();
+    const cssWidth = Math.max(rect.width, 320);
+    const cssHeight = Math.max(rect.height, 260);
+
+    canvas.width = Math.floor(cssWidth * ratio);
+    canvas.height = Math.floor(cssHeight * ratio);
+
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+    const rootStyles = getComputedStyle(document.documentElement);
+    const textColor = rootStyles.getPropertyValue("--text").trim() || "rgba(20,25,35,.86)";
+    const mutedColor = rootStyles.getPropertyValue("--muted").trim() || "rgba(100,110,125,.72)";
+    const gridColor = rootStyles.getPropertyValue("--line").trim() || "rgba(120,130,145,.16)";
+
+    const left = 48;
+    const right = 18;
+    const top = 24;
+    const bottom = 52;
+    const width = cssWidth - left - right;
+    const height = cssHeight - top - bottom;
+    const minY = 80;
+    const maxY = 100;
+
+    ctx.font = "12px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.lineWidth = 1;
+
+    for (let value = 80; value <= 100; value += 5) {
+      const y = top + (maxY - value) / (maxY - minY) * height;
+      ctx.strokeStyle = gridColor;
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(left + width, y);
+      ctx.stroke();
+
+      ctx.fillStyle = mutedColor;
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`${value}%`, left - 9, y);
+    }
+
+    const xFor = (index) => (
+      data.length === 1
+        ? left + width / 2
+        : left + index / (data.length - 1) * width
+    );
+
+    const yFor = (value) => {
+      const safe = Math.max(minY, Math.min(maxY, Number(value)));
+      return top + (maxY - safe) / (maxY - minY) * height;
+    };
+
+    const series = [
+      ["overall", "#5b8cff"],
+      ["completeness", "#8b5cf6"],
+      ["freshness", "#22c55e"]
+    ];
+
+    for (const [key, color] of series) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+
+      data.forEach((row, index) => {
+        const x = xFor(index);
+        const y = yFor(row[key]);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+
+      ctx.stroke();
+
+      data.forEach((row, index) => {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(xFor(index), yFor(row[key]), 3.6, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    ctx.fillStyle = mutedColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+
+    data.forEach((row, index) => {
+      if (
+        data.length > 6 &&
+        index !== 0 &&
+        index !== data.length - 1 &&
+        index % 2 !== 0
+      ) return;
+
+      ctx.fillText(row.label, xFor(index), top + height + 15);
+    });
+
+    const latest = data[data.length - 1];
+    ctx.fillStyle = textColor;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.font = "600 12px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillText(
+      `Latest ${Number(latest.overall).toFixed(2)}%`,
+      left + width,
+      2
+    );
+  }
+
+  draw();
+  window.addEventListener("resize", draw);
+})();
+</script>
+
+{% endblock %}
 {% block crumb %}Data Quality Center{% endblock %}
 
 {% block content %}
@@ -93,6 +225,40 @@
         </tbody>
       </table>
     </div>
+  </section>
+  {% endif %}
+
+  {% if pipeline_history %}
+  <section class="panel reveal pipeline-history-chart-panel">
+    <div class="panel-head">
+      <div>
+        <span class="eyebrow">PIPELINE HEALTH TREND</span>
+        <h2>Quality across recent ETL runs</h2>
+        <p>Compare overall quality, completeness and freshness across recent successful pipeline refreshes.</p>
+      </div>
+      <div class="pipeline-chart-legend" aria-label="Chart legend">
+        <span><i class="legend-dot overall"></i>Overall</span>
+        <span><i class="legend-dot completeness"></i>Completeness</span>
+        <span><i class="legend-dot freshness"></i>Freshness</span>
+      </div>
+    </div>
+
+    <div class="pipeline-chart-shell">
+      <canvas id="pipeline-health-chart" width="1200" height="420" aria-label="Pipeline quality history chart"></canvas>
+    </div>
+
+    <script type="application/json" id="pipeline-health-data">
+      [
+        {% for row in pipeline_history|reverse %}
+        {
+          "label": "{{ row['finished_at'].strftime('%d %b %H:%M') }}",
+          "overall": {{ "%.2f"|format(row["overall_score"]) }},
+          "completeness": {{ "%.2f"|format(row["completeness"]) }},
+          "freshness": {{ "%.2f"|format(row["freshness"]) }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    </script>
   </section>
   {% endif %}
 
@@ -192,6 +358,55 @@
 </div>
 
 <style>
+.pipeline-history-chart-panel {
+  overflow: hidden;
+}
+
+.pipeline-chart-shell {
+  width: 100%;
+  min-height: 320px;
+  margin-top: 10px;
+  position: relative;
+}
+
+.pipeline-chart-shell canvas {
+  width: 100%;
+  height: 320px;
+  display: block;
+}
+
+.pipeline-chart-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: .82rem;
+  opacity: .78;
+}
+
+.pipeline-chart-legend span {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  background: currentColor;
+}
+
+.legend-dot.overall { color: #5b8cff; }
+.legend-dot.completeness { color: #8b5cf6; }
+.legend-dot.freshness { color: #22c55e; }
+
+@media (max-width: 760px) {
+  .pipeline-chart-shell { min-height: 260px; }
+  .pipeline-chart-shell canvas { height: 260px; }
+}
+
 .quality-run-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
