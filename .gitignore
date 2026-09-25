@@ -29,3 +29,16 @@ logs/
 *.zip
 .redesign-backup-*/
 .healthatlas-backup-*/
+
+# HealthAtlas data platform
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+logs/*.log
+data/raw/*
+data/staging/*
+data/curated/*
+!data/raw/.gitkeep
+!data/staging/.gitkeep
+!data/curated/.gitkeep
