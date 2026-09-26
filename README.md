@@ -2,71 +2,119 @@
 
 **Travel smarter. Understand global health.**
 
-HealthAtlas is a travel-first global health intelligence platform. The consumer experience starts with a destination and trip context, while the underlying product retains deeper vaccination, infectious-disease, country-comparison, insight, and data-quality analytics.
+HealthAtlas is a travel-first global health intelligence platform that combines a
+consumer-facing travel experience with a growing data-engineering platform for
+vaccination, infectious-disease, country, data-quality, and global-health analytics.
 
-Vaccination is now one module inside a broader global-health product rather than the entire product.
+Public deployment: **https://healthatlas-web.onrender.com/**
 
-## Current milestone
+> HealthAtlas is an informational analytics project. It does not provide medical
+> diagnosis or personalised medical advice.
 
-This repository starts from the HealthAtlas product pivot and includes:
+## Current product
 
-- Travel-first HealthAtlas branding
-- `/travel` Travel Health Planner
-- origin, destination, departure date, and trip duration inputs
-- destination health snapshot backed by the existing public-health dataset
-- country profiles
+The web product currently includes:
+
+- Travel Health Planner
+- country health profiles
 - vaccination analytics
 - infectious-disease analytics
 - country comparison
 - global insights
-- data-quality centre
-- light/dark UI and interactive dashboard features
+- PostgreSQL-backed data-quality monitoring
+- light/dark UI and interactive charts
 
-HealthAtlas does **not** currently provide medical diagnosis or personalised medical advice. Future travel-health guidance should be connected to authoritative sources and display source/freshness metadata.
-
-## Architecture today
+The existing country-profile route is:
 
 ```text
-SQLite public-health dataset
-        ↓
-      Flask
-        ↓
-HealthAtlas Web Product
-   ├── Travel Planner
-   ├── Country Profiles
-   ├── Vaccination Analytics
-   ├── Infection Analytics
-   ├── Compare
-   ├── Insights
-   └── Data Quality
+/country/<country_id>
 ```
 
-## Long-term architecture
+Examples:
 
 ```text
-Authoritative public health sources
-              ↓
-          Ingestion
-              ↓
-        Raw / Staging
-              ↓
-       Data Validation
-              ↓
-          PostgreSQL
-              ↓
-      Analytics Warehouse
-              ↓
-           FastAPI
-       ┌──────┼──────┐
-       ↓      ↓      ↓
-    Travel  Analytics API
-       ↓
- Alerts / AI / Forecasting
+/country/AUS
+/country/VNM
 ```
+
+## Data platform
+
+HealthAtlas now has a repeatable data-engineering pipeline rather than only a
+Flask + SQLite application.
+
+```text
+SQLite public-health seed
+          ↓
+Extraction + normalisation
+          ↓
+Validation + quality scoring
+          ↓
+PostgreSQL staging
+          ↓
+Curated views
+          ↓
+Dimensional warehouse
+          ↓
+Analytics marts
+          ↓
+Flask product + data-quality dashboard
+          ↓
+Docker + Render
+```
+
+### PostgreSQL layers
+
+```text
+staging
+  ↓
+curated
+  ↓
+warehouse
+  ↓
+analytics
+```
+
+The warehouse includes country, region, antigen, infection, and date dimensions,
+plus vaccination, infection, and population facts.
+
+Analytics marts include country health summaries, vaccination trends, and
+infection burden.
+
+## Orchestration and deployment
+
+The project includes:
+
+- Prefect orchestration and local scheduling
+- Docker and Docker Compose
+- PostgreSQL for local/container development
+- Render Blueprint deployment
+- managed PostgreSQL on Render
+- `/health` service health check
+- an initial cloud ETL refresh through `run_pipeline.py`
+
+The production web service is deployed from the `main` branch.
+
+## Current data-source transition
+
+`immunisation-2.db` is intentionally tracked **temporarily** as the reproducible
+seed used by the current Render deployment.
+
+The codebase is in a hybrid transition:
+
+- SQLite remains the seed/source dataset and is still queried by some existing
+  product routes.
+- The ETL pipeline loads PostgreSQL and builds curated, warehouse, and analytics
+  layers.
+- The data-quality experience is backed by PostgreSQL.
+- Upcoming product work will move more user-facing routes onto the PostgreSQL
+  analytics marts.
+
+The long-term goal is to replace the repository seed database with ingestion from
+authoritative public-health and travel-health sources.
 
 ## Local setup
 
-Create a virtual environment:
+Create and activate a virtual environment:
 
 ```bash
 python3 -m venv .venv
@@ -74,16 +122,24 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-The current milestone uses `immunisation-2.db`. The database is intentionally not committed to this new repository. If you are developing from the original course project locally, copy it into this repo:
+Copy the environment template:
 
 ```bash
-cp ~/Documents/cosc3106-immunisation-project/immunisation-2.db ./immunisation-2.db
+cp .env.example .env
 ```
 
-Run:
+Update the local PostgreSQL credentials in `.env`.
+
+Run the ETL pipeline:
 
 ```bash
-python3 app.py
+python run_pipeline.py
+```
+
+Run the Flask app:
+
+```bash
+python app.py
 ```
 
 Open:
@@ -91,22 +147,55 @@ Open:
 ```text
 http://127.0.0.1:5001/
 http://127.0.0.1:5001/travel
+http://127.0.0.1:5001/data-quality
 ```
 
-## Roadmap
+## Tests
 
-1. Travel-first product pivot
-2. Authoritative travel-health source connectors
-3. PostgreSQL ETL + data quality
-4. Dimensional warehouse
-5. Orchestration + dbt
-6. FastAPI analytics layer
-7. Saved trips + accounts
-8. Health alerts and trip monitoring
-9. AI analytics copilot
-10. B2B API and organisation workspaces
-11. SaaS subscriptions
+```bash
+python -m pytest -q
+```
+
+## Repository rules
+
+Do not commit:
+
+- `.env`
+- passwords, tokens, or API keys
+- virtual environments
+- logs and generated reports
+- temporary ZIP packages or backup files
+
+`immunisation-2.db` is the current exception because it is used as the cloud seed.
+It should be removed from Git once source ingestion replaces it.
+
+## Completed engineering milestones
+
+- travel-first HealthAtlas product pivot
+- PostgreSQL ETL foundation
+- data validation and transparent quality scoring
+- persistent pipeline-run history
+- dimensional warehouse
+- analytics marts
+- Prefect orchestration
+- scheduled local Prefect deployment
+- Docker containerisation
+- Render cloud deployment
+
+## Next milestones
+
+1. Country directory and search experience
+2. Move country product analytics from direct SQLite queries to PostgreSQL marts
+3. Travel Planner v2
+4. Authoritative public-health/travel-health source connectors
+5. API layer
+6. Saved trips and user accounts
+7. Health alerts and trip monitoring
+8. AI analytics copilot
+9. B2B API and organisation workspaces
 
 ## Product principle
 
-HealthAtlas should make global-health information easier to explore without hiding where the data came from. Source provenance, freshness, data quality, and explicit limitations are core product features.
+HealthAtlas should make global-health information easier to explore without hiding
+where the data came from. Source provenance, freshness, data quality, and explicit
+limitations are core product features.

@@ -4,41 +4,40 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
 # Secrets
 .env
 .env.*
 !.env.example
 
-# Local datasets
-immunisation-2.db
-*.sqlite
-*.sqlite3
-
-# Logs / caches
+# Generated data / local pipeline output
 logs/
 *.log
 .cache/
-
-# macOS / editors
-.DS_Store
-.vscode/
-.idea/
-
-# Local packaging / backups
-*.zip
-.redesign-backup-*/
-.healthatlas-backup-*/
-
-# HealthAtlas data platform
-.env
-.venv/
-__pycache__/
-.pytest_cache/
-logs/*.log
+reports/
 data/raw/*
 data/staging/*
 data/curated/*
 !data/raw/.gitkeep
 !data/staging/.gitkeep
 !data/curated/.gitkeep
+
+# Local SQLite variants
+# Note: immunisation-2.db is intentionally tracked for the current Render seed.
+*.sqlite
+*.sqlite3
+
+# Packaging / backups
+*.zip
+*.bak*
+.redesign-backup-*/
+.healthatlas-backup-/
+healthatlas-step*/
+
+# macOS / editors
+.DS_Store
+.vscode/
+.idea/
