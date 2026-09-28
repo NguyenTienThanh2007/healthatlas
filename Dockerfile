@@ -22,4 +22,4 @@ ENV PORT=5001
 
 EXPOSE 5001
 
-CMD ["sh", "-c", "gunicorn --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:${PORT:-5001} app:app"]
+CMD ["sh", "-c", "python ensure_cloud_data.py && exec gunicorn --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:${PORT:-5001} app:app"]
