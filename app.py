@@ -244,6 +244,89 @@ def travel():
     )
 
 
+
+# =========================
+# COUNTRY DIRECTORY — STEP 9A
+# PostgreSQL analytics discovery surface
+# =========================
+
+@app.route("/countries")
+def countries_directory():
+    search = (request.args.get("q") or "").strip()
+    selected_region = (request.args.get("region") or "").strip()
+    sort_option = (request.args.get("sort") or "country").strip()
+
+    allowed_sorts = {
+        "country": "country_name ASC",
+        "coverage": "avg_coverage DESC NULLS LAST, country_name ASC",
+        "population": "population DESC NULLS LAST, country_name ASC",
+        "cases": "total_cases DESC NULLS LAST, country_name ASC",
+    }
+    if sort_option not in allowed_sorts:
+        sort_option = "country"
+
+    where_parts = []
+    params = {}
+
+    if search:
+        where_parts.append(
+            "(country_name ILIKE :search OR country_id ILIKE :search OR region_name ILIKE :search)"
+        )
+        params["search"] = f"%{search}%"
+
+    if selected_region:
+        where_parts.append("region_id = :region_id")
+        params["region_id"] = selected_region
+
+    where_clause = "WHERE " + " AND ".join(where_parts) if where_parts else ""
+
+    with POSTGRES_ENGINE.connect() as pg_conn:
+        region_rows = pg_conn.execute(
+            text("""
+                SELECT DISTINCT region_id, region_name
+                FROM analytics.country_health_summary
+                WHERE region_id IS NOT NULL AND region_name IS NOT NULL
+                ORDER BY region_name
+            """)
+        ).mappings().all()
+
+        country_rows = pg_conn.execute(
+            text(
+                f"""
+                SELECT
+                    country_id, country_name, region_id, region_name,
+                    economy_id, economic_phase,
+                    latest_vaccination_year, avg_coverage, total_doses,
+                    latest_infection_year, total_cases,
+                    latest_population_year, population
+                FROM analytics.country_health_summary
+                {where_clause}
+                ORDER BY {allowed_sorts[sort_option]}
+                """
+            ),
+            params,
+        ).mappings().all()
+
+    countries = [dict(row) for row in country_rows]
+    regions = [dict(row) for row in region_rows]
+
+    vaccination_profile_count = sum(1 for country in countries if country["avg_coverage"] is not None)
+    infection_profile_count = sum(1 for country in countries if country["total_cases"] is not None)
+    region_count = len({country["region_id"] for country in countries if country["region_id"]})
+
+    return render_template(
+        "countries.html",
+        countries=countries,
+        regions=regions,
+        search=search,
+        selected_region=selected_region,
+        sort_option=sort_option,
+        vaccination_profile_count=vaccination_profile_count,
+        infection_profile_count=infection_profile_count,
+        region_count=region_count,
+    )
+
+
 # =========================
 # VACCINATION EXPLORER
 # =========================

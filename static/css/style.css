@@ -302,3 +302,36 @@ body{background:
   .route-arrow{transform:rotate(90deg);margin:0 auto}
   .trip-meta-grid,.travel-score-grid{grid-template-columns:1fr}
 }
+
+/* HEALTHATLAS — STEP 9A COUNTRY DIRECTORY */
+.countries-page{display:grid;gap:18px}
+.countries-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding:34px;border:1px solid var(--line);border-radius:30px;background:radial-gradient(circle at 92% 8%,rgba(10,132,255,.14),transparent 30%),linear-gradient(135deg,rgba(255,255,255,.9),rgba(244,248,255,.88));box-shadow:var(--soft)}
+.countries-hero h1{max-width:760px;margin:7px 0 9px;font-size:clamp(34px,4.4vw,58px);line-height:.98;letter-spacing:-.055em}
+.countries-hero p{max-width:720px;margin:0;color:var(--muted);font-size:11px;line-height:1.7}
+.countries-source-badge{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:var(--glass-strong)}
+.countries-source-badge>span{width:9px;height:9px;border-radius:50%;background:#20c997;box-shadow:0 0 0 6px rgba(32,201,151,.11)}
+.countries-source-badge small,.countries-source-badge strong{display:block}.countries-source-badge small{color:var(--muted);font-size:7px;letter-spacing:.12em}.countries-source-badge strong{margin-top:2px;font-size:9px}
+.countries-filter-panel{padding:16px}
+.countries-filter-form{display:grid;grid-template-columns:minmax(260px,1.4fr) minmax(160px,.7fr) minmax(160px,.7fr) auto;gap:10px;align-items:end}
+.countries-filter-form label{display:grid;gap:7px}.countries-filter-form label>span{font-size:8px;letter-spacing:.1em;color:var(--muted);font-weight:800}
+.countries-filter-form input,.countries-filter-form select{width:100%;height:44px;border:1px solid var(--line);border-radius:13px;background:var(--glass-strong);color:var(--text);padding:0 11px;outline:none}
+.countries-search-field>div{position:relative}.countries-search-field b{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:500}.countries-search-field input{padding-left:34px}
+.countries-filter-form input:focus,.countries-filter-form select:focus{border-color:rgba(10,132,255,.45);box-shadow:0 0 0 4px rgba(10,132,255,.07)}
+.countries-filter-button{height:44px;white-space:nowrap}
+.countries-filter-context{display:flex;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:9px}.countries-filter-context a{color:#0a84ff;font-weight:800}
+.countries-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden;border:1px solid var(--line);border-radius:22px;background:var(--glass)}
+.countries-stat-grid article{padding:17px 19px;border-right:1px solid var(--line)}.countries-stat-grid article:last-child{border-right:0}
+.countries-stat-grid small,.countries-stat-grid strong,.countries-stat-grid span{display:block}.countries-stat-grid small{font-size:7px;letter-spacing:.1em;color:var(--muted)}.countries-stat-grid strong{margin-top:5px;font-size:24px;letter-spacing:-.04em}.countries-stat-grid span{margin-top:2px;font-size:8px;color:var(--muted)}
+.countries-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.country-directory-card{position:relative;overflow:hidden;min-height:300px;display:flex;flex-direction:column;padding:18px;border:1px solid var(--line);border-radius:22px;background:radial-gradient(circle at 90% 0%,rgba(10,132,255,.08),transparent 34%),var(--glass-strong);box-shadow:var(--soft);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.country-directory-card:hover{transform:translateY(-4px);border-color:rgba(10,132,255,.28);box-shadow:0 20px 46px rgba(31,64,120,.12)}
+.country-directory-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.country-directory-code{padding:6px 8px;border-radius:9px;background:#e9f3ff;color:#0a84ff;font-size:8px;font-weight:900;letter-spacing:.12em}.country-directory-card-head>span{font-size:8px;color:var(--muted)}
+.country-directory-title{margin-top:23px}.country-directory-title small{font-size:8px;color:#0a84ff;font-weight:800}.country-directory-title h2{margin:5px 0 3px;font-size:24px;letter-spacing:-.04em}.country-directory-title p{margin:0;color:var(--muted);font-size:8px}
+.country-directory-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:20px}.country-directory-metrics>div{min-width:0;padding:10px;border-radius:13px;background:#f7f9fd}
+.country-directory-metrics small,.country-directory-metrics strong,.country-directory-metrics span{display:block}.country-directory-metrics small{font-size:7px;color:var(--muted)}.country-directory-metrics strong{overflow:hidden;margin-top:4px;font-size:13px;text-overflow:ellipsis}.country-directory-metrics span{margin-top:3px;font-size:7px;color:var(--muted)}
+.country-directory-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:18px}.country-directory-footer>span{display:flex;align-items:center;gap:7px;font-size:8px;color:var(--muted)}.country-directory-footer i{width:7px;height:7px;border-radius:50%}.country-directory-footer .ready i{background:#20c997}.country-directory-footer .limited i{background:#f0a020}.country-directory-footer b{font-size:18px;color:#0a84ff}
+.countries-empty{min-height:300px;display:grid;justify-items:center;align-content:center;text-align:center}.countries-empty>div{width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:#e9f3ff;color:#0a84ff;font-size:23px}.countries-empty h2{margin:14px 0 5px;font-size:24px}.countries-empty p{margin:0 0 16px;color:var(--muted);font-size:9px}
+[data-theme="dark"] .countries-hero{background:var(--glass)}[data-theme="dark"] .country-directory-code,[data-theme="dark"] .countries-empty>div{background:#102b49}[data-theme="dark"] .country-directory-metrics>div{background:#101f35}
+@media(max-width:1180px){.countries-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.countries-filter-form{grid-template-columns:1fr 1fr}.countries-filter-button{width:100%}}
+@media(max-width:780px){.countries-hero{align-items:flex-start;flex-direction:column;padding:24px}.countries-stat-grid{grid-template-columns:repeat(2,1fr)}.countries-stat-grid article:nth-child(2){border-right:0}.countries-stat-grid article:nth-child(-n+2){border-bottom:1px solid var(--line)}.countries-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.countries-filter-form{grid-template-columns:1fr}.countries-stat-grid{grid-template-columns:1fr}.countries-stat-grid article{border-right:0;border-bottom:1px solid var(--line)}.countries-stat-grid article:last-child{border-bottom:0}.country-directory-metrics{grid-template-columns:1fr}}

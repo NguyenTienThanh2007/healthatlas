@@ -25,6 +25,7 @@
     <nav class="side-nav">
       <a class="nav-item {% if request.endpoint == 'landing' %}active{% endif %}" href="{{ url_for('landing') }}"><span>⌂</span>Overview</a>
       <a class="nav-item travel-nav {% if request.endpoint == 'travel' %}active{% endif %}" href="{{ url_for('travel') }}"><span>✈</span>Travel Planner <em>NEW</em></a>
+      <a class="nav-item {% if request.endpoint == 'countries_directory' %}active{% endif %}" href="{{ url_for('countries_directory') }}"><span>◎</span>Countries</a>
       <a class="nav-item {% if request.endpoint == 'vaccination' %}active{% endif %}" href="{{ url_for('vaccination') }}"><span>⌁</span>Vaccinations</a>
       <a class="nav-item {% if request.endpoint == 'improvement' %}active{% endif %}" href="{{ url_for('improvement') }}"><span>↗</span>Improvement</a>
       <a class="nav-item {% if request.endpoint == 'infections' %}active{% endif %}" href="{{ url_for('infections') }}"><span>✣</span>Infections</a>

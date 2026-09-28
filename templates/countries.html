@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Countries · HealthAtlas{% endblock %}
+{% block crumb %}Countries{% endblock %}
+{% block content %}
+<div class="page countries-page">
+  <section class="countries-hero reveal">
+    <div>
+      <span class="eyebrow">GLOBAL HEALTH DIRECTORY</span>
+      <h1>Explore country health profiles</h1>
+      <p>Search destinations and open a country profile backed by the HealthAtlas PostgreSQL analytics layer.</p>
+    </div>
+    <div class="countries-source-badge">
+      <span></span>
+      <div><small>DATA SOURCE</small><strong>PostgreSQL analytics</strong></div>
+    </div>
+  </section>
+
+  <section class="countries-filter-panel panel reveal">
+    <form method="get" action="{{ url_for('countries_directory') }}" class="countries-filter-form">
+      <label class="countries-search-field">
+        <span>SEARCH COUNTRY</span>
+        <div><b>⌕</b><input type="search" name="q" value="{{ search }}" placeholder="Australia, Vietnam, AUS..." autocomplete="off"></div>
+      </label>
+      <label>
+        <span>REGION</span>
+        <select name="region">
+          <option value="">All regions</option>
+          {% for item in regions %}
+            <option value="{{ item['region_id'] }}" {% if selected_region == item['region_id'] %}selected{% endif %}>{{ item['region_name'] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>SORT BY</span>
+        <select name="sort">
+          <option value="country" {% if sort_option == "country" %}selected{% endif %}>Country</option>
+          <option value="coverage" {% if sort_option == "coverage" %}selected{% endif %}>Vaccination coverage</option>
+          <option value="population" {% if sort_option == "population" %}selected{% endif %}>Population</option>
+          <option value="cases" {% if sort_option == "cases" %}selected{% endif %}>Recorded cases</option>
+        </select>
+      </label>
+      <button class="btn primary countries-filter-button" type="submit">Apply filters →</button>
+    </form>
+
+    {% if search or selected_region or sort_option != "country" %}
+      <div class="countries-filter-context">
+        <span>{{ countries|length }} matching profiles</span>
+        <a href="{{ url_for('countries_directory') }}">Clear filters</a>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="countries-stat-grid reveal">
+    <article><small>VISIBLE PROFILES</small><strong>{{ countries|length }}</strong><span>countries in this view</span></article>
+    <article><small>REGIONS</small><strong>{{ region_count }}</strong><span>represented globally</span></article>
+    <article><small>WITH VACCINATION DATA</small><strong>{{ vaccination_profile_count }}</strong><span>analytics-ready profiles</span></article>
+    <article><small>WITH INFECTION DATA</small><strong>{{ infection_profile_count }}</strong><span>recorded burden data</span></article>
+  </section>
+
+  {% if countries %}
+    <section class="countries-grid reveal">
+      {% for country in countries %}
+        <a class="country-directory-card" href="{{ url_for('country_profile', country_id=country['country_id']) }}">
+          <div class="country-directory-card-head">
+            <div class="country-directory-code">{{ country['country_id'] }}</div>
+            <span>Open profile ↗</span>
+          </div>
+          <div class="country-directory-title">
+            <small>{{ country['region_name'] or "Region unavailable" }}</small>
+            <h2>{{ country['country_name'] }}</h2>
+            <p>{{ country['economic_phase'] or "Economic profile unavailable" }}</p>
+          </div>
+          <div class="country-directory-metrics">
+            <div><small>Population</small><strong>{% if country['population'] is not none %}{{ "{:,.0f}".format(country['population']|float) }}{% else %}—{% endif %}</strong><span>{{ country['latest_population_year'] or "No year" }}</span></div>
+            <div><small>Avg. coverage</small><strong>{% if country['avg_coverage'] is not none %}{{ "%.1f"|format(country['avg_coverage']|float) }}%{% else %}—{% endif %}</strong><span>{{ country['latest_vaccination_year'] or "No year" }}</span></div>
+            <div><small>Recorded cases</small><strong>{% if country['total_cases'] is not none %}{{ "{:,.0f}".format(country['total_cases']|float) }}{% else %}—{% endif %}</strong><span>{{ country['latest_infection_year'] or "No year" }}</span></div>
+          </div>
+          <div class="country-directory-footer">
+            <span class="{% if country['avg_coverage'] is not none %}ready{% else %}limited{% endif %}">
+              <i></i>{% if country['avg_coverage'] is not none %}Vaccination analytics available{% else %}Limited vaccination data{% endif %}
+            </span>
+            <b>→</b>
+          </div>
+        </a>
+      {% endfor %}
+    </section>
+  {% else %}
+    <section class="countries-empty panel reveal">
+      <div>⌕</div>
+      <h2>No matching country profiles</h2>
+      <p>Try another country name, ISO code, or region.</p>
+      <a class="btn primary" href="{{ url_for('countries_directory') }}">Show all countries</a>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}
